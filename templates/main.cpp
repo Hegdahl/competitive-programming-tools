@@ -49,6 +49,9 @@ template<typename T, typename... Ts> void cins(T &first, T &second, Ts&... rest)
 template<typename T> istream &operator>>(istream &is, vector<T> &a) { for (T &v : a) is >> v; return is; }
 
 int main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
   GETI(T); REP(TT, T) {
   }
 }
