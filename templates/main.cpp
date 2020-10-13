@@ -47,11 +47,16 @@ template<typename T, typename... Ts> void cins(T &first, T &second, Ts&... rest)
 #define GETC(...) GET(char, __VA_ARGS__)
 
 template<typename T> istream &operator>>(istream &is, vector<T> &a) { for (T &v : a) is >> v; return is; }
+template<typename T, size_t N> istream &operator>>(istream &is, ar<T, N> &a) {
+  REP(i, N) cin >> a[i];
+  return is;
+}
 
 int main() {
   ios::sync_with_stdio(false);
   cin.tie(0);
 
   GETI(T); REP(TT, T) {
+
   }
 }
