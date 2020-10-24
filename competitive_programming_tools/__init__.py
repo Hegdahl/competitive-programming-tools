@@ -78,6 +78,7 @@ def mk_impl(ctx, name):
     {
         'cpp': mkcpp,
     }.get(lang, fallback)(name)
+    return name
 
 @main.command()
 @click.argument('name', type=click.Path(exists=False))
@@ -93,6 +94,12 @@ def mks(ctx, name, count):
     os.mkdir(name)
     for i in range(count):
         mk_impl(ctx, os.path.join(name, chr(ord('A')+i)))
+
+@main.command()
+@click.argument('name', type=click.Path(exists=False))
+@click.pass_context
+def mke(ctx, name):
+    os.system(f'$EDITOR {mk_impl(ctx, name)}')
 
 @main.command()
 @click.argument('name', type=click.Path())
