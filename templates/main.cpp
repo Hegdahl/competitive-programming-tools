@@ -48,7 +48,7 @@ template<typename T, typename... Ts> void cins(T &first, T &second, Ts&... rest)
 
 template<typename T> istream &operator>>(istream &is, vector<T> &a) { for (T &v : a) is >> v; return is; }
 template<typename T, size_t N> istream &operator>>(istream &is, ar<T, N> &a) {
-  REP(i, N) cin >> a[i];
+  REP(i, N) is >> a[i];
   return is;
 }
 
