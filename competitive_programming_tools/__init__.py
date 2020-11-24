@@ -29,7 +29,7 @@ def run(ctx, source, time):
         os.close(fd)
 
         debug_txt = '-DENABLE_DEBUG' if ctx.obj['DEBUG'] else ''
-        compile_cmd = f'g++ -O2 -Wall {debug_txt} -I{INCLUDE_PATH} -o {out_path} {source}'
+        compile_cmd = f'g++ -std=gnu++17 -O2 -Wall {debug_txt} -I{INCLUDE_PATH} -o {out_path} {source}'
 
         click.echo(f'Compiling {path_fmt(source)} '
                    f'to {path_fmt(out_path)}...', nl=False)
