@@ -28,6 +28,9 @@ template<typename Int, Int MOD>struct modnum {
 //#define USE_EGCD
 #ifdef USE_EGCD
   modnum inverse() const {
+#else
+  modnum _inverse() const {
+#endif
     Int pr = v, r = MOD;
     Int ps = 1, s = 0;
     while (r) {
@@ -37,8 +40,11 @@ template<typename Int, Int MOD>struct modnum {
     }
     return ps;
   }
-#else
+#ifndef USE_EGCD
   modnum inverse() const {
+#else
+  modnum _inverse() const {
+#endif
     modnum a(1);
     Int e = MOD-2;
     modnum b = *this;
@@ -49,7 +55,6 @@ template<typename Int, Int MOD>struct modnum {
     }
     return a;
   }
-#endif
 
   bool operator==(const modnum &o) const { return v == o.v; }
   bool operator!=(const modnum &o) const { return v != o.v; }
@@ -64,11 +69,23 @@ using mint = modnum<ll, ll(1e9)+7>;
 /*END_SNIPPET*/
 
 int main() {
-  const int N = 1e7;
+  using namespace chrono;
+  auto START = high_resolution_clock::now();
 
-  mint v(1);
-  for (int i = 0; i < N; ++i) {
-    v *= 2;
-    assert(v/v == 1);
+  mint res = 0;
+  for(auto rep = 0; rep < 5'000'000'0; ++ rep){
+    res += mint(1) / 2;
   }
+
+  cout << duration<double>(high_resolution_clock::now() - START).count() << "\n";
+  cout << res << "\n";
+  START = high_resolution_clock::now();
+
+  res = 0;
+  for(auto rep = 0; rep < 5'000'000'0; ++ rep){
+    res += mint(2)._inverse();
+  }
+
+  cout << duration<double>(high_resolution_clock::now() - START).count() << "\n";
+  cout << res << "\n";
 }
