@@ -29,7 +29,7 @@ template<typename Int, Int MOD>struct modnum {
 #ifdef USE_EGCD
   modnum inverse() const {
 #else
-  modnum _inverse() const {
+  modnum _inverse_egcd() const {
 #endif
     Int pr = v, r = MOD;
     Int ps = 1, s = 0;
@@ -43,7 +43,7 @@ template<typename Int, Int MOD>struct modnum {
 #ifndef USE_EGCD
   modnum inverse() const {
 #else
-  modnum _inverse() const {
+  modnum _inverse_bexp() const {
 #endif
     modnum a(1);
     Int e = MOD-2;
@@ -83,7 +83,7 @@ int main() {
 
   res = 0;
   for(auto rep = 0; rep < 5'000'000'0; ++ rep){
-    res += mint(2)._inverse();
+    res += mint(2)._inverse_egcd();
   }
 
   cout << duration<double>(high_resolution_clock::now() - START).count() << "\n";
