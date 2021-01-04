@@ -126,3 +126,17 @@ def paste(ctx, name):
         if ctx.obj['DEBUG']:
             click.secho('ok', fg='green')
 
+@main.command()
+@click.argument('name', type=str)
+@click.pass_context
+def get(ctx, name):
+    if not name.endswith('.cpp'):  name += '.cpp'
+    path = os.path.join(DIRNAME, '..', 'snippets', name)
+    if os.path.exists(path):
+        with open(path) as file:
+            content = file.read()
+            _, content = content.split('/*BEGIN_SNIPPET*/\n')
+            content, _ = content.split('/*END_SNIPPET*/')
+            print(content)
+    else:
+        click.secho(f'\nCould not find snippet {name!r}.', fg='red')

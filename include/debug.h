@@ -75,7 +75,7 @@ namespace debugging {
         os << ')';
       }
     };
- 
+
     template<typename T>
     void show_type_and_val(const T &value) {
       string c = "\e[34m", r = "\e[m";
@@ -130,7 +130,7 @@ namespace debugging {
     }
   };
 }
-#define DEBUG(...) do {				\
-  debugging::Debugger _debugger(cerr, __LINE__);		\
+#define DEBUG(...) do {				        \
+  debugging::Debugger _debugger(cerr, __LINE__);	\
   _debugger.show_named(#__VA_ARGS__, __VA_ARGS__);	\
 } while(0)

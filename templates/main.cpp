@@ -32,7 +32,6 @@ using iset = tree<T, null_type, Cmp, rb_tree_tag,
 #define RREPS(name, start, stop) RREPSI(name, start, stop, 1)
 #define RREP(name, stop) RREPS(name, 0, stop)
 
-
 template<typename T> void cins(T &first) { cin >> first; }
 template<typename T, typename... Ts> void cins(T &first, T &second, Ts&... rest) {
   cin >> first;
@@ -46,17 +45,22 @@ template<typename T, typename... Ts> void cins(T &first, T &second, Ts&... rest)
 #define GETD(...) GET(double, __VA_ARGS__)
 #define GETC(...) GET(char, __VA_ARGS__)
 
-template<typename T> istream &operator>>(istream &is, vector<T> &a) { for (T &v : a) is >> v; return is; }
-template<typename T, size_t N> istream &operator>>(istream &is, ar<T, N> &a) {
-  REP(i, N) is >> a[i];
-  return is;
-}
+struct hsh {
+  size_t operator()(uint64_t x) const {
+    static const uint64_t FIXED_RANDOM = chrono::steady_clock::now().time_since_epoch().count();
+    x += FIXED_RANDOM;
+    x += 0x9e3779b97f4a7c15;
+    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
+    x = (x ^ (x >> 27)) * 0x94d049bb133111eb;
+    return x ^ (x >> 31);
+  }
+};
 
 int main() {
-  ios::sync_with_stdio(false);
-  cin.tie(0);
+  ios::sync_with_stdio(0);cin.tie(0);
 
   GETI(T); REP(TT, T) {
 
   }
+
 }
