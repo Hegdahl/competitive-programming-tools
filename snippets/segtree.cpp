@@ -54,6 +54,14 @@ struct SegTreeBase {
     }
   }
 
+  void set(int i, S v) {
+    assert(i >= 0 && i < offset);
+    i += offset;
+    push_col(i);
+    values[i] = v;
+    while (i /= 2) recalc(i);
+  }
+
   void upd_node(int I, const F &f) {
     assert(I > 0 && I < 2*offset);
     values[I] = f * values[I];
@@ -63,7 +71,7 @@ struct SegTreeBase {
   void upd(int i, const F &f) {
     assert(i >= 0 && i < offset);
     i += offset;
-    push_col(i, f);
+    push_col(i);
     upd_node(i, f);
     while (i/=2) recalc(i);
   }

@@ -28,15 +28,17 @@ def run(ctx, source, time):
         fd, out_path = mkstemp()
         os.close(fd)
 
-        debug_txt = '-DENABLE_DEBUG' if ctx.obj['DEBUG'] else ''
+        debug_txt = '-DENABLE_DEBUG -fsanitize=address' if ctx.obj['DEBUG'] else ''
         compile_cmd = f'g++ -std=gnu++17 -O2 -Wall {debug_txt} -I{INCLUDE_PATH} -o {out_path} {source}'
 
-        click.echo(f'Compiling {path_fmt(source)} '
-                   f'to {path_fmt(out_path)}...', nl=False)
+        if ctx.obj['DEBUG']:
+            click.echo(f'Compiling {path_fmt(source)} '
+                       f'to {path_fmt(out_path)}...', nl=False)
         if os.system(compile_cmd):
             click.secho('\nFailed compiling.', fg='red')
         else:
-            click.secho(' ok', fg='green')
+            if ctx.obj['DEBUG']:
+                click.secho(' ok', fg='green')
             run_cmd = out_path
             if (time): run_cmd = 'time '+run_cmd
             os.system(run_cmd)
