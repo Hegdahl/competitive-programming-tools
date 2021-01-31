@@ -40,7 +40,7 @@ def run(ctx, source, time):
             if ctx.obj['DEBUG']:
                 click.secho(' ok', fg='green')
             run_cmd = out_path
-            if (time): run_cmd = 'time '+run_cmd
+            if (time): run_cmd = 'time -f "%Us (%es)" '+run_cmd
             os.system(run_cmd)
             os.remove(out_path)
 

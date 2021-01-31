@@ -39,7 +39,7 @@ template<typename Int, Int MOD>struct modnum {
 
   static vector<modnum> _inverses;
   static auto _init_inverses() {
-    vector<modnum> inv(INVERSE_CUTOFF);
+    vector<modnum> inv(INVERSE_CUTOFF+1);
     inv[1] = 1;
     for (int i = 2; i <= INVERSE_CUTOFF; ++i)
       inv[i] = MOD - (MOD/i) * inv[MOD%i];
@@ -78,7 +78,7 @@ template<typename Int, Int MOD>struct modnum {
   explicit operator Int() const { return v; }
 
   friend ostream &operator<<(ostream &os, const modnum x) { return os << x.v; }
-  friend ostream &operator>>(ostream &os, modnum &x) { Int v; os >> v; x = modnum(v); return os; }
+  friend istream &operator>>(istream &is, modnum &x) { Int v; is >> v; x = modnum(v); return is; }
 };
 using mint = modnum<ll, ll(1e9)+7>;
 //using mint = modnum<ll, (1LL<<23)*7*17+1>;
