@@ -18,10 +18,18 @@ def main(ctx, debug):
     ctx.obj['DEBUG'] = debug
 
 @main.command()
+@click.option('-d', '--debug', is_flag=True, default=True)
 @click.option('-t', '--time', is_flag=True)
+@click.option('-T', '--test', type=int)
+@click.option('-T', '--test_all', is_flag=True)
 @click.argument('source', type=click.Path())
 @click.pass_context
-def run(ctx, source, time):
+def run(ctx, source, debug, time, test, test_all):
+    #print(test)
+    #print(test_all)
+    if not debug:
+        ctx.obj['DEBUG'] = False
+
     def run_cpp(ctx, source, time):
         INCLUDE_PATH = os.path.join(os.path.dirname(DIRNAME), 'include')
 

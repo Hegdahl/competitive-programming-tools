@@ -18,6 +18,8 @@ using ull = unsigned long long;
 using lll = __int128;
 using ulll = unsigned __int128;
 
+using ld = long double;
+
 template<typename T, size_t N> using ar = array<T, N>;
 
 template<typename T, typename Cmp = less<T>>
