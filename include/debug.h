@@ -34,8 +34,12 @@ namespace debugging {
     char *c_str = abi::__cxa_demangle(typeid(T).name(), 0, 0, &status);
     string retval = c_str;
     free(c_str);
- 
-    return find_and_replace(retval, "std::", "");
+
+    retval = find_and_replace(retval, "std::", "");
+    retval = find_and_replace(retval, "__debug::", "");
+    retval = find_and_replace(retval, "__gnu_pbds::", "");
+
+    return retval;
   }
 
   struct Debugger {
