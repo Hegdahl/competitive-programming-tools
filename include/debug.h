@@ -39,13 +39,33 @@ namespace debugging {
     retval = find_and_replace(retval, "__debug::", "");
     retval = find_and_replace(retval, "__gnu_pbds::", "");
 
+    bool found;
+    do {
+      found = false;
+      
+      int p0 = (int)retval.find(", allocator<");
+      if (p0 != -1) {
+        found = true;
+        int p = p0 + 12;
+        int balance = 1;
+        while (p < (int)retval.size() && balance) {
+          if (retval[p] == '<') ++balance;
+          if (retval[p] == '>') --balance;
+          ++p;
+        }
+
+        retval.erase(retval.begin()+p0, retval.begin()+p+1);
+      }
+      
+    } while (found);
+
     return retval;
   }
 
   struct Debugger {
     ostream &_os;
     Debugger(ostream &os, size_t line_number) : _os(os) {
-      _os << "\e[1;35m[DEBUG:" << line_number << "]\e[m ";
+      _os << "\e[1;35m[" << line_number << "]\e[m ";
     }
     ~Debugger() { _os << '\n'; }
  
