@@ -22,9 +22,10 @@ def main(ctx, debug):
 @click.option('-t', '--time', is_flag=True)
 @click.option('-T', '--test', type=int)
 @click.option('-T', '--test_all', is_flag=True)
+@click.option('-s', '--sanitize', is_flag=True)
 @click.argument('source', type=click.Path())
 @click.pass_context
-def run(ctx, source, debug, time, test, test_all):
+def run(ctx, source, debug, time, test, test_all, sanitize):
     #print(test)
     #print(test_all)
     if not debug:
@@ -36,8 +37,25 @@ def run(ctx, source, debug, time, test, test_all):
         fd, out_path = mkstemp()
         os.close(fd)
 
-        debug_txt = '-DENABLE_DEBUG -fsanitize=address' if ctx.obj['DEBUG'] else ''
-        compile_cmd = f'g++ -std=gnu++17 -O2 -Wall {debug_txt} -I{INCLUDE_PATH} -o {out_path} {source}'
+        debug_txt = (
+            '-DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -D_FORTIFY_SOURCE=2 '
+            if ctx.obj['DEBUG'] else ''
+        )
+
+        sanitize_txt = (
+            '-fsanitize=undefined -fsanitize=address -fstack-protector '
+            if sanitize else ''
+        )
+
+        warnings = (
+            '-Wall -Wshadow -Wformat=2 -Wfloat-equal -Wconversion -Wlogical-op -Wshift-overflow '
+            '-Wduplicated-cond -Wcast-qual -Wcast-align '
+        )
+
+        compile_cmd = (
+            f'g++ -std=gnu++17 -O2 {warnings}{debug_txt}{sanitize_txt}'
+            f'-I{INCLUDE_PATH} -o {out_path} {source}'
+        )
 
         if ctx.obj['DEBUG']:
             click.echo(f'Compiling {path_fmt(source)} '
@@ -52,6 +70,9 @@ def run(ctx, source, debug, time, test, test_all):
             os.system(run_cmd)
             os.remove(out_path)
 
+    def run_py(ctx, source, time):
+        os.system(f'{"time " if time else ""}python {source}')
+
     if not os.path.exists(source):
         if (os.path.exists(source + '.cpp')):
             source += '.cpp'
@@ -61,6 +82,7 @@ def run(ctx, source, debug, time, test, test_all):
     file_type = os.path.basename(source).rpartition('.')[-1]
     {
         'cpp': run_cpp,
+        'py': run_py,
     }.get(
         file_type,
         lambda *args, **kwargs: click.secho(

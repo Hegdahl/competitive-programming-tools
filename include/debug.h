@@ -39,11 +39,11 @@ namespace debugging {
   }
 
   struct Debugger {
-    ostream &os;
-    Debugger(ostream &os, size_t line_number) : os(os) {
-      os << "\e[1;35m[DEBUG:" << line_number << "]\e[m ";
+    ostream &_os;
+    Debugger(ostream &os, size_t line_number) : _os(os) {
+      _os << "\e[1;35m[DEBUG:" << line_number << "]\e[m ";
     }
-    ~Debugger() { os << '\n'; }
+    ~Debugger() { _os << '\n'; }
  
     template<typename T, typename = void>
     struct show_val { show_val(ostream &os, const T &value) { os << value; } };
@@ -79,37 +79,37 @@ namespace debugging {
     template<typename T>
     void show_type_and_val(const T &value) {
       string c = "\e[34m", r = "\e[m";
-      os << c
-         << find_and_replace(
-	      find_and_replace(
-	        find_and_replace(
-	          type_name<T>(), "<", r+"<"+c
-	        ),
-	        ">", r+">"+c),
-              ",", r+","+c
-	    )
-         << r << ' ';
-      show_val<T>(os, value);
+      _os << c
+          << find_and_replace(
+	       find_and_replace(
+	         find_and_replace(
+	           type_name<T>(), "<", r+"<"+c
+	         ),
+	         ">", r+">"+c),
+               ",", r+","+c
+	     )
+          << r << ' ';
+      show_val<T>(_os, value);
     }
  
     template<typename T>
     void show_tabbed(const T &value) {
-      os << "  "; show_type_and_val(value);
+      _os << "  "; show_type_and_val(value);
     }
     template<typename T, typename... Ts>
     void show_tabbed(const T &first, const Ts&... rest) {
       show_tabbed(first);
-      os << '\n';
+      _os << '\n';
       show_tabbed(rest...);
     }
     template<typename... Ts>
     void show_named(const char *names, const Ts&... values) {
-      os << names << " =\n";
+      _os << names << " =\n";
       show_tabbed(values...);
     }
     template<typename T>
     void show_named(const char *name, const T &value) {
-      os << name << " = ";
+      _os << name << " = ";
       show_type_and_val(value);
     }
     template<size_t N, typename... Ts>
@@ -121,12 +121,12 @@ namespace debugging {
       }
       name += 2;
       while (*name == ' ') ++name;
-      os << "\e[1;33m" << first << "\e[m " << name << " =\n";
+      _os << "\e[1;33m" << first << "\e[m " << name << " =\n";
       show_tabbed(rest...);
     }
     template<size_t N>
     void show_named(const char *name, const char (&value)[N]) {
-      os << "\e[1;33m" << value << "\e[m" << '\n';
+      _os << "\e[1;33m" << value << "\e[m" << '\n';
     }
   };
 }

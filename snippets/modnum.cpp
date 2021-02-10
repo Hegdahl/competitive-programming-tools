@@ -10,7 +10,7 @@ using lll = __int128;
 template<typename Int, Int MOD>struct modnum {
   Int v;
   modnum() : v(0) {}
-  modnum(Int v) : v(v>=MOD?v%MOD:v<0?v%MOD+MOD:v) {}
+  modnum(Int _v) : v(_v>=MOD?_v%MOD:_v<0?_v%MOD+MOD:_v) {}
 
   modnum &operator++() { if (++v == MOD) v = 0; return *this; }
   modnum &operator--() { if (v == 0) v = MOD; --v; return *this; }
