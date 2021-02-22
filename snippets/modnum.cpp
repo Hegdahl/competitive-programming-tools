@@ -8,6 +8,8 @@ using lll = __int128;
 #define INVERSE_CUTOFF int(1e6)
 //#define USE_EGCD
 template<typename Int, Int MOD>struct modnum {
+  using value_type = Int;
+
   Int v;
   modnum() : v(0) {}
   modnum(Int _v) : v(_v>=MOD?_v%MOD:_v<0?_v%MOD+MOD:_v) {}
@@ -26,6 +28,9 @@ template<typename Int, Int MOD>struct modnum {
   friend modnum operator-(modnum l, const modnum &r) { return l -= r; }
   friend modnum operator*(modnum l, const modnum &r) { return l *= r; }
   friend modnum operator/(modnum l, const modnum &r) { return l /= r; }
+
+  modnum operator-() const { return {MOD - v}; }
+  modnum operator+() const { return *this; }
 
   modnum pow(Int e) const {
     modnum ans = 1, base = v;
@@ -83,6 +88,8 @@ template<typename Int, Int MOD>struct modnum {
 using mint = modnum<ll, ll(1e9)+7>;
 //using mint = modnum<ll, (1LL<<23)*7*17+1>;
 template<> vector<mint> mint::_inverses = mint::_init_inverses();
+
+mint operator""_M(unsigned long long x) { return {(mint::value_type)x}; }
 /*END_SNIPPET*/
 
 int main() {
@@ -113,8 +120,11 @@ int main() {
   }
   cout << "ok\n";
 
-  cout << (mint(4) == 4) << '\n';
-  cout << (4 == mint(4)) << '\n';
-  cout << (mint(4) == 3) << '\n';
-  cout << (4 == mint(3)) << '\n';
+  cout << (4_M == 4) << '\n';
+  cout << (4 == 4_M) << '\n';
+  cout << (4_M == 3) << '\n';
+  cout << (4 == 4_M) << '\n';
+  cout << (-4 == -4_M) << '\n';
+  cout << (-4 == +4_M) << '\n';
+  cout << (+4 == -4_M) << '\n';
 }
