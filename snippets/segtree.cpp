@@ -1,3 +1,4 @@
+#pragma GCC optimize("Ofast")
 #include <bits/stdc++.h>
 
 using namespace std;
@@ -11,9 +12,8 @@ struct SegTreeBase {
   vector<F> queued;
   int lg2, offset;
 
-  static constexpr int log2i(unsigned n) { return 32-__builtin_clz(--n); }
   SegTreeBase(const vector<S> &src)
-    : lg2(log2i(src.size())), offset(1<<log2i(src.size())) {
+    : lg2(__lg((int)src.size()-1)+1), offset(2<<__lg((int)src.size()-1)) {
     values.reserve(2*offset);
     values.resize(offset);
     values.insert(values.end(), src.begin(), src.end());
@@ -90,9 +90,11 @@ struct SegTreeBase {
       i >>= 1, j >>= 1;
     }
     i = oi+1, j = oj-1;
+    int min_lvl_i = __builtin_ctz(i);
+    int min_lvl_j = __builtin_ctz(j+1);
     for (int lvl = 1; lvl <= lg2; lvl++) {
-      if (__builtin_ctz(i) < lvl) recalc(i >> lvl);
-      if (__builtin_ctz(j+1) < lvl) recalc(j >> lvl);
+      if (min_lvl_i < lvl) recalc(i >> lvl);
+      if (min_lvl_j < lvl) recalc(j >> lvl);
     }
   }
 
