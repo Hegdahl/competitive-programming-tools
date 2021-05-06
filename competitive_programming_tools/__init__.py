@@ -38,12 +38,12 @@ def run(ctx, source, debug, time, test, test_all, sanitize):
         os.close(fd)
 
         debug_txt = (
-            '-DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -D_FORTIFY_SOURCE=2 '
+            '-DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC '
             if ctx.obj['DEBUG'] else ''
         )
 
         sanitize_txt = (
-            '-fsanitize=undefined -fsanitize=address -fstack-protector '
+            '-fsanitize=undefined '
             if sanitize else ''
         )
 
@@ -53,7 +53,7 @@ def run(ctx, source, debug, time, test, test_all, sanitize):
         )
 
         compile_cmd = (
-            f'g++ -std=gnu++17 -O2 {warnings}{debug_txt}{sanitize_txt}'
+            f'g++ -std=gnu++17 -fsplit-stack -O2 {warnings}{debug_txt}{sanitize_txt}'
             f'-I{INCLUDE_PATH} -o {out_path} {source}'
         )
 
