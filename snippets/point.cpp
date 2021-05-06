@@ -16,7 +16,7 @@ struct Point {
   Point operator-(const Point &o) const { Point r = *this; r -= o; return r; }
 
   friend bool operator==(const Point &a, const Point &b) { return a.x==b.x && a.y==b.y; }
-  friend bool operator!=(const Point &a, const Point &b) { return a.x!=b.x && a.y!=b.y; }
+  friend bool operator!=(const Point &a, const Point &b) { return a.x!=b.x || a.y!=b.y; }
 
   friend ll cross(const Point &a, const Point &b) { return a.x*b.y - b.x*a.y; }
   friend ll dot(const Point &a, const Point &b) { return a.x*b.x + b.y*a.y; }
