@@ -53,7 +53,7 @@ def run(ctx, source, debug, time, test, test_all, sanitize):
         )
 
         compile_cmd = (
-            f'g++ -std=gnu++17 -fsplit-stack -O2 {warnings}{debug_txt}{sanitize_txt}'
+            f'g++ -std=gnu++17 -O2 {warnings}{debug_txt}{sanitize_txt}'
             f'-I{INCLUDE_PATH} -o {out_path} {source}'
         )
 
