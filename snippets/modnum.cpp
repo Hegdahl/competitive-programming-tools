@@ -2,94 +2,66 @@
 
 using namespace std;
 using ll = long long;
-using lll = __int128;
 
 /*BEGIN_SNIPPET*/
-#define INVERSE_CUTOFF int(1e6)
-//#define USE_EGCD
-template<typename Int, Int MOD>struct modnum {
-  using value_type = Int;
+template<typename T>
+struct modnum {
+  using Int = typename T::type;
+  using Int2 = typename T::prod_type;
+  Int val;
 
-  Int v;
-  modnum() : v(0) {}
-  modnum(Int _v) : v(_v>=MOD?_v%MOD:_v<0?_v%MOD+MOD:_v) {}
+  modnum() = default;
+  modnum(const Int &_val) : val((_val%T::MOD+T::MOD)%T::MOD) {}
 
-  modnum &operator++() { if (++v == MOD) v = 0; return *this; }
-  modnum &operator--() { if (v == 0) v = MOD; --v; return *this; }
-  modnum operator++(int) { modnum r = *this; ++*this; return r; }
-  modnum operator--(int) { modnum r = *this; --*this; return r; }
+  modnum &operator++() { if (++val == T::MOD) val = 0; return *this; }
+  modnum &operator--() { if (val-- == 0) val += T::MOD; return *this; }
+  modnum &operator++(int) { auto ret = *this; ++*this; return ret; }
+  modnum &operator--(int) { auto ret = *this; --*this; return ret; }
 
-  modnum &operator+=(const modnum &o) { v -= MOD-o.v; if (v<0) v += MOD; return *this; }
-  modnum &operator-=(const modnum &o) { v -= o.v; if (v<0) v += MOD; return *this; }
-  modnum &operator*=(const modnum &o) { v *= o.v; if (v>=MOD) v %= MOD; return *this; }
-  modnum &operator/=(const modnum &o) { *this *= o.inverse(); return *this; }
+  modnum &operator+=(const modnum &o) { if ((val += o.val) >= T::MOD) val -= T::MOD; return *this; }
+  modnum &operator-=(const modnum &o) { if ((val -= o.val) < 0) val += T::MOD; return *this; }
+  modnum &operator*=(const modnum &o) { val = Int((Int2)val*o.val%T::MOD); return *this; }
+  modnum &operator/=(const modnum &o) { *this *= o.inv(); return *this; }
 
-  friend modnum operator+(modnum l, const modnum &r) { return l += r; }
-  friend modnum operator-(modnum l, const modnum &r) { return l -= r; }
-  friend modnum operator*(modnum l, const modnum &r) { return l *= r; }
-  friend modnum operator/(modnum l, const modnum &r) { return l /= r; }
+  friend modnum operator+(const modnum &a, const modnum &b) { auto ret = a; return ret += b; }
+  friend modnum operator-(const modnum &a, const modnum &b) { auto ret = a; return ret -= b; }
+  friend modnum operator*(const modnum &a, const modnum &b) { auto ret = a; return ret *= b; }
+  friend modnum operator/(const modnum &a, const modnum &b) { auto ret = a; return ret /= b; }
 
-  modnum operator-() const { return {MOD - v}; }
-  modnum operator+() const { return *this; }
+  friend bool operator==(const modnum &a, const modnum &b) { return a.val == b.val; }
+  friend bool operator!=(const modnum &a, const modnum &b) { return a.val != b.val; }
 
-  modnum pow(Int e) const {
-    modnum ans = 1, base = v;
+  modnum pow(ll e) const {
+    modnum b = *this, a = 1;
     while (e) {
-      if (e&1) ans *= base;
-      base *= base;
+      if (e&1) a *= b;
+      b *= b;
       e >>= 1;
     }
-    return ans;
+    return a;
   }
 
-  static vector<modnum> _inverses;
-  static auto _init_inverses() {
-    vector<modnum> inv(INVERSE_CUTOFF+1);
-    inv[1] = 1;
-    for (int i = 2; i <= INVERSE_CUTOFF; ++i)
-      inv[i] = MOD - (MOD/i) * inv[MOD%i];
-    return inv;
-  }
-  auto inverse() const {
-    if (v <= INVERSE_CUTOFF) return _inverses[v];
-    return _inverse();
-  }
+  modnum inv() const { return pow(T::MOD-2); }
 
-#ifdef USE_EGCD
-  modnum _inverse() const {
-#else
-  modnum _inverse_egcd() const {
-#endif
-    Int pr = v, r = MOD;
-    Int ps = 1, s = 0;
-    while (r) {
-      Int q = pr/r;
-      pr -= q*r; swap(r, pr);
-      ps -= q*s; swap(s, ps);
-    }
-    return ps;
-  }
-#ifndef USE_EGCD
-  modnum _inverse() const {
-#else
-  modnum _inverse_bexp() const {
-#endif
-    return pow(MOD-2);
-  }
-
-  friend bool operator==(const modnum &l, const modnum &r) { return l.v == r.v; }
-  friend bool operator!=(const modnum &l, const modnum &r) { return l.v != r.v; }
-
-  explicit operator Int() const { return v; }
-
-  friend ostream &operator<<(ostream &os, const modnum x) { return os << x.v; }
-  friend istream &operator>>(istream &is, modnum &x) { Int v; is >> v; x = modnum(v); return is; }
+  friend istream &operator>>(istream &is, modnum &x) { Int v; is >> v; x = v; return is; }
+  friend ostream &operator<<(ostream &os, const modnum &x) { return os << x.val; }
 };
-using mint = modnum<ll, ll(1e9)+7>;
-//using mint = modnum<ll, (1LL<<23)*7*17+1>;
-template<> vector<mint> mint::_inverses = mint::_init_inverses();
 
-mint operator""_M(unsigned long long x) { return {(mint::value_type)x}; }
+struct _static_mod_t {
+  using type = int;
+  using prod_type = ll;
+  static constexpr type MOD = 1'000'000'007;
+};
+
+struct _var_mod_t {
+  using type = int;
+  using prod_type = ll;
+  static type MOD;
+};
+typename _var_mod_t::type _var_mod_t::MOD = 1;
+//typename _var_mod_t::type &MOD = _var_mod_t::MOD;
+
+using mint = modnum<_static_mod_t>;
 /*END_SNIPPET*/
 
 int main() {
