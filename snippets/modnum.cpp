@@ -65,38 +65,10 @@ using mint = modnum<_static_mod_t>;
 /*END_SNIPPET*/
 
 int main() {
-  using namespace chrono;
-  auto START = high_resolution_clock::now();
-
-  mint res = 0;
-  for(auto rep = 0; rep < 5'000'000'0; ++ rep){
-    res += mint(1) / 2;
-  }
-
-  cout << duration<double>(high_resolution_clock::now() - START).count() << "\n";
-  cout << res << "\n";
-  START = high_resolution_clock::now();
-
-  res = 0;
-  for(auto rep = 0; rep < 5'000'000'0; ++ rep){
-    res += mint(2)._inverse_egcd();
-  }
-
-  cout << duration<double>(high_resolution_clock::now() - START).count() << "\n";
-  cout << res << "\n";
-
   mint v = 1;
   for (int i = 0; i < 1e7; ++i) {
     v *= 2;
     assert(v/v == 1);
   }
   cout << "ok\n";
-
-  cout << (4_M == 4) << '\n';
-  cout << (4 == 4_M) << '\n';
-  cout << (4_M == 3) << '\n';
-  cout << (4 == 4_M) << '\n';
-  cout << (-4 == -4_M) << '\n';
-  cout << (-4 == +4_M) << '\n';
-  cout << (+4 == -4_M) << '\n';
 }
