@@ -59,7 +59,7 @@ struct SegTree {
 
     auto &operator*=(F f) {
       static_assert(is_lazy);
-      st.upd(i, j, f, 1, 0, st.offset);
+      st.upd(i, j, f, 1, 0, st.offset-1);
       return *this;
     }
 
