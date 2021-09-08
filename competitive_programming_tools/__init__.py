@@ -14,18 +14,18 @@ def path_fmt(path):
 @click.pass_context
 def main(ctx, debug):
     ctx.ensure_object(dict)
-
     ctx.obj['DEBUG'] = debug
 
 @main.command()
 @click.option('-d', '--debug', is_flag=True, default=True)
 @click.option('-t', '--time', is_flag=True)
 @click.option('-T', '--test', type=int)
-@click.option('-T', '--test_all', is_flag=True)
+@click.option('-TT', '--test_all', is_flag=True)
 @click.option('-s', '--sanitize', is_flag=True)
+@click.option('-v', '--version')
 @click.argument('source', type=click.Path())
 @click.pass_context
-def run(ctx, source, debug, time, test, test_all, sanitize):
+def run(ctx, source, debug, time, test, test_all, version, sanitize):
     #print(test)
     #print(test_all)
     if not debug:
@@ -48,7 +48,7 @@ def run(ctx, source, debug, time, test, test_all, sanitize):
         )
 
         warnings = (
-            '-Wall -Wshadow -Wformat=2 -Wfloat-equal -Wconversion -Wlogical-op -Wshift-overflow '
+            '-Wall -Wextra -pedantic -Wshadow -Wformat=2 -Wfloat-equal -Wconversion -Wlogical-op -Wshift-overflow '
             '-Wduplicated-cond -Wcast-qual -Wcast-align '
         )
 
@@ -56,6 +56,9 @@ def run(ctx, source, debug, time, test, test_all, sanitize):
             f'g++ -std=gnu++17 -O2 {warnings}{debug_txt}{sanitize_txt}'
             f'-I{INCLUDE_PATH} -o {out_path} {source}'
         )
+
+        if version is not None:
+            compile_cmd += f' -std={version}'
 
         if ctx.obj['DEBUG']:
             click.echo(f'Compiling {path_fmt(source)} '
