@@ -5,6 +5,15 @@ using namespace std;
 using ll = long long;
 
 /*BEGIN_SNIPPET*/
+
+template<class T>
+struct lvalue_maker {
+  T value;
+  T *operator->() {
+    return &value;
+  }
+};
+
 template<class S, class F = std::nullptr_t>
 struct SegTree {
   static constexpr bool is_lazy = !std::is_same<F, std::nullptr_t>::value;
@@ -63,16 +72,19 @@ struct SegTree {
       return *this;
     }
 
-    operator S() {
+    S operator*() {
       return st.qry(i, j, 1, 0, st.offset-1);
+    }
+    auto operator->() {
+      return lvalue_maker<S>{**this};
     }
   };
 
-  auto operator[](int i) {
+  auto operator()(int i) {
     return RangeReference(*this, i, i);
   }
-  auto operator[](pair<int,int> ij) {
-    return RangeReference(*this, ij.first, ij.second);
+  auto operator()(int i, int j) {
+    return RangeReference(*this, i, j);
   }
 
   int push(int I, int l, int r) {
@@ -137,7 +149,7 @@ struct SegTree {
 
 struct S {
   ll w = 0, sum = 0; 
-  ar<ll, 2> mx = {-1LL<<60, 0}, mx2 = {-1LL<<60, 0};
+  ar<ll, 2> mx = {-(1LL<<60), 0}, mx2 = {-(1LL<<60), 0};
 
   S() {}
   S(ll v) : w(1), sum(v), mx({v, 1}) {}
@@ -149,7 +161,7 @@ struct S {
     ar v {l.mx, l.mx2, r.mx, r.mx2};
     sort(v.rbegin(), v.rend());
     for (int i = 2; i >= 0; --i)
-      if (v[i][0] == v[i+1][0]) v[i][1] += v[i+1][1], v[i+1] = {-1LL<<60, 0};
+      if (v[i][0] == v[i+1][0]) v[i][1] += v[i+1][1], v[i+1] = {-(1LL<<60), 0};
     sort(v.rbegin(), v.rend());
 
     mx = v[0], mx2 = v[1];
@@ -193,20 +205,21 @@ int main() {
   for (int &x : a) cin >> x;
 
   SegTree st(n, S{}, F{});
-  st[{0, n-1}] = a;
+  st(0, n-1) = a;
 
   int q; cin >> q;
   for (int qq = 0; qq < q; ++qq) {
-    int t; cin >> t;
+    int t, i, j, x;
+    cin >> t >> i >> j;
+    --i, --j;
+    if (t != 3) cin >> x;
+
     if (t == 1) {
-      int i, j, x; cin >> i >> j >> x; --i, --j;
-      st[{i, j}] *= {0, x};
+      st(i, j) *= {0, x};
     } else if (t == 2) {
-      int i, j, x; cin >> i >> j >> x; --i, --j;
-      st[{i, j}] *= {x, 1LL<<60};
+      st(i, j) *= {x, 1LL<<60};
     } else if (t == 3) {
-      int i, j; cin >> i >> j; --i, --j;
-      cout << S(st[{i, j}]).sum << '\n';
+      cout << st(i, j)->sum << '\n';
     }
   }
 }
