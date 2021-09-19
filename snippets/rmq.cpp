@@ -7,15 +7,13 @@ using ll = long long;
 /*BEGIN_SNIPPET*/
 template<class T, class Cmp>
 struct RMQ {
-  static constexpr int MAX_LENGTH = 1e6;
-
   int n, lvls;
   T identity;
 
-  vector<T> data[__lg(MAX_LENGTH)+1];
+  vector<vector<T>> data;
 
   RMQ(int n_, const T &identity_)
-    : n(n_), identity(identity_) {
+    : n(n_), identity(identity_), data(__lg(n)+1) {
     for (lvls = 0; n - (1<<lvls) + 1 > 0; ++lvls)
       data[lvls].resize(n - (1<<lvls) + 1, identity);
   }
