@@ -4,115 +4,133 @@
 using ll = long long;
 
 /*BEGIN_SNIPPET*/
-class LiChao {
- 
- public:
-  LiChao(ll x0, ll xf)
-    : sz(0), x0_(x0), xf_(xf), root(nullptr) {}
- 
-  ~LiChao() {
-    if (root) delete root;
-  }
- 
-  ll query(ll x) {
-    return query_impl(root, x, x0_, xf_);
-  }
- 
-  void update(ll a, ll b) {
-    return update_impl(root, Line{a, b}, x0_, xf_);
-  }
- 
-  friend LiChao* merge(LiChao *lc0, LiChao *lc1) {
-    if (!lc0) return lc1;
-    if (!lc1) return lc0;
-    if (lc0->size() < lc1->size())
-      std::swap(lc0, lc1);
-
-    std::set<std::pair<ll, ll>> lines;
-    dfs(lc1->root, [&](ll a, ll b){
-      lines.insert({a, b});
-    });
-    for (auto [a, b] : lines)
-      lc0->update(a, b);
-    delete lc1;
-    return lc0;
-  }
-
-  size_t size() const {
-    return sz;
-  }
-
- private:
-  struct Line {
-    ll a, b;
-    ll operator()(ll x) const {
-      return a*x + b;
-    }
-  };
-
+template<class F, class X>
+struct LiChao {
   struct Node {
-    Line line;
-    Node *lkid, *rkid;
-    Node(Line line_)
-      : line(line_), lkid(nullptr), rkid(nullptr) {}
-    ~Node() {
-      if (lkid) delete lkid;
-      if (rkid) delete rkid;
-    }
+    F f;
+    int lk = -1, rk = -1;
   };
 
-  template<class CallBack>
-  static void dfs(Node *node, const CallBack &cb) {
-    if (!node) return;
-    dfs(node->lkid, cb);
-    cb(node->line.a, node->line.b);
-    dfs(node->rkid, cb);
+  int root = -1;
+  std::vector<Node> nodes;
+
+  auto query(const X &x) {
+    return query_impl(root, x, X::lo(), X::hi());
   }
- 
-  size_t sz;
-  ll x0_, xf_;
-  Node *root;
- 
-  ll query_impl(Node *node, ll x, ll x0, ll xf) {
-    if (!node) return 1LL<<60;
- 
-    ll xm = x0 + (xf-x0)/2;
- 
-    if (x < xm)
-      return std::min(node->line(x), query_impl(node->lkid, x, x0, xm));
+
+  void update(const F &f, const X &ux0, const X &uxf) {
+    root = update_impl(root, f, X::lo(), X::hi(), ux0, uxf);
+  }
+
+  auto query_impl(int I, const X &x, const X &nx0, const X &nxf) {
+    if (I == -1) return F{}(x);
+
+    X mid {nx0, nxf};
+    if (x < mid)
+      return std::min(nodes[I].f(x), query_impl(nodes[I].lk, x, nx0, mid));
     else
-      return std::min(node->line(x), query_impl(node->rkid, x, xm, xf));
+      return std::min(nodes[I].f(x), query_impl(nodes[I].rk, x, mid, nxf));
   }
- 
-  void update_impl(Node *&node, Line new_line, ll x0, ll xf) {
-    if (!node) {
-      ++sz;
-      node = new Node(new_line);
-      return;
+
+  int update_impl(int I, F f, const X &nx0, const X &nxf, const X &ux0, const X &uxf) {
+    if (!(ux0 < nxf))
+      return I;
+    if (!(nx0 < uxf))
+      return I;
+
+    if (I == -1) {
+      I = (int)nodes.size();
+      nodes.emplace_back();
     }
- 
-    ll xm = x0 + (xf-x0)/2;
-    bool imp0 = new_line(x0) < node->line(x0);
-    bool impm = new_line(xm) < node->line(xm);
- 
-    if (impm)
-      std::swap(node->line, new_line);
- 
-    if (xf-x0 == 1)
-      return;
- 
-    if (imp0 != impm)
-      update_impl(node->lkid, new_line, x0, xm);
-    else
-      update_impl(node->rkid, new_line, xm, xf);
+
+    X mid {nx0, nxf};
+
+    bool cover = !(nx0<ux0 || uxf<nxf);
+    bool imp_lef = f(nx0) < nodes[I].f(nx0);
+    bool imp_mid = f(mid) < nodes[I].f(mid);
+
+    if (cover) {
+
+      if (imp_mid)
+        std::swap(f, nodes[I].f);
+
+      if (!(nx0 < mid && mid < nxf))
+        return I;
+
+      if (imp_lef ^ imp_mid)
+        nodes[I].lk = update_impl(nodes[I].lk, f, nx0, mid, ux0, uxf);
+      else
+        nodes[I].rk = update_impl(nodes[I].rk, f, mid, nxf, ux0, uxf);
+
+    } else {
+
+      if (!(nx0 < mid && mid < nxf))
+        return I;
+
+      nodes[I].lk = update_impl(nodes[I].lk, f, nx0, mid, ux0, uxf);
+      nodes[I].rk = update_impl(nodes[I].rk, f, mid, nxf, ux0, uxf);
+    }
+
+    return I;
+  }
+};
+
+struct X {
+  ll v;
+  X(ll v_) : v(v_) {}
+  X(X a, X b) : v((a.v + b.v)/2) {}
+
+  static X lo() { return {-int(1e9)}; }
+  static X hi() { return {int(1e9)}; }
+
+  friend bool operator<(const X &a, const X &b) {
+    return a.v < b.v;
+  }
+};
+
+struct F {
+  int a = 0;
+  ll b = std::numeric_limits<ll>::max();
+  ll operator()(X x) {
+    return (ll)a*x.v + b;
   }
 };
 /*END_SNIPPET*/
 
 using namespace std;
 
+// Solution for https://old.yosupo.jp/problem/segment_add_get_min
 int main() {
   cin.tie(0)->sync_with_stdio(0);
 
-  //TODO: make test
+  LiChao<F, X> lc;
+
+  int n, q;
+  cin >> n >> q;
+
+  for (int i = 0; i < n; ++i) {
+    int x0, xf, a;
+    ll b;
+    cin >> x0 >> xf >> a >> b;
+    lc.update(F{a, b}, {x0}, {xf});
+  }
+
+  for (int qq = 0; qq < q; ++qq) {
+    int t;
+    cin >> t;
+    if (t == 0) {
+      int x0, xf, a;
+      ll b;
+      cin >> x0 >> xf >> a >> b;
+      lc.update(F{a, b}, {x0}, {xf});
+    } else if (t == 1) {
+      int x;
+      cin >> x;
+      ll res = lc.query(x);
+      if (res == numeric_limits<ll>::max())
+        cout << "INFINITY\n";
+      else
+        cout << res << '\n';
+    } else assert(0);
+  }
 }
