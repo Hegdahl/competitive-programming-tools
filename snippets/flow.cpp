@@ -93,7 +93,7 @@ struct Dinics {
     return true;
   }
 
-  // O(N'+E')
+  // O(V'+E')
   ll dfs(int cur, ll mn) {
     vis_list.push_back(cur);
 
