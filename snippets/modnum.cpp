@@ -1,7 +1,5 @@
-#include <bits/stdc++.h>
-
-using namespace std;
-using ll = long long;
+#include <cassert>
+#include <iostream>
 
 /*BEGIN_SNIPPET*/
 template<typename T>
@@ -11,7 +9,7 @@ struct modnum {
   Int val;
 
   modnum() = default;
-  modnum(const Int &_val) : val((_val%T::MOD+T::MOD)%T::MOD) {}
+  modnum(const Int2 &_val) : val(Int((_val%T::MOD+T::MOD)%T::MOD)) {}
 
   modnum &operator++() { if (++val == T::MOD) val = 0; return *this; }
   modnum &operator--() { if (val-- == 0) val += T::MOD; return *this; }
@@ -31,7 +29,7 @@ struct modnum {
   friend bool operator==(const modnum &a, const modnum &b) { return a.val == b.val; }
   friend bool operator!=(const modnum &a, const modnum &b) { return a.val != b.val; }
 
-  modnum pow(ll e) const {
+  modnum pow(long long e) const {
     modnum b = *this, a = 1;
     while (e) {
       if (e&1) a *= b;
@@ -43,25 +41,25 @@ struct modnum {
 
   modnum inv() const { return pow(T::MOD-2); }
 
-  friend istream &operator>>(istream &is, modnum &x) { Int v; is >> v; x = v; return is; }
-  friend ostream &operator<<(ostream &os, const modnum &x) { return os << x.val; }
+  friend std::istream &operator>>(std::istream &is, modnum &x) { Int v; is >> v; x = v; return is; }
+  friend std::ostream &operator<<(std::ostream &os, const modnum &x) { return os << x.val; }
 };
 
-struct _static_mod_t {
+struct static_mod_t {
   using type = int;
-  using prod_type = ll;
+  using prod_type = long long;
   static constexpr type MOD = 1'000'000'007;
 };
 
-struct _var_mod_t {
+struct var_mod_t {
   using type = int;
-  using prod_type = ll;
+  using prod_type = long long;
   static type MOD;
 };
-typename _var_mod_t::type _var_mod_t::MOD = 1;
-//typename _var_mod_t::type &MOD = _var_mod_t::MOD;
+typename var_mod_t::type var_mod_t::MOD = 1;
+//typename var_mod_t::type &MOD = var_mod_t::MOD;
 
-using mint = modnum<_static_mod_t>;
+using mint = modnum<static_mod_t>;
 /*END_SNIPPET*/
 
 int main() {
@@ -70,5 +68,5 @@ int main() {
     v *= 2;
     assert(v/v == 1);
   }
-  cout << "ok\n";
+  std::cout << "ok\n";
 }
