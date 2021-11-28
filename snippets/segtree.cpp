@@ -1,28 +1,17 @@
 #include <bits/stdc++.h>
-#define ar array
 
-using namespace std;
 using ll = long long;
 
 /*BEGIN_SNIPPET*/
-
-template<class T>
-struct lvalue_maker {
-  T value;
-  T *operator->() {
-    return &value;
-  }
-};
-
 template<class S, class F = std::nullptr_t>
 struct SegTree {
   static constexpr bool is_lazy = !std::is_same<F, std::nullptr_t>::value;
 
   int n, offset;
-  vector<S> values;
-  vector<F> lazy;
+  std::vector<S> values;
+  std::vector<F> lazy;
 
-  SegTree(int n_) : n(n_), offset(2<<__lg(n-1)) {
+  SegTree(int n_) : n(n_), offset(2<<std::__lg(n-1)) {
     values.resize(2*offset);
     if constexpr (is_lazy) lazy.resize(offset);
   }
@@ -75,8 +64,16 @@ struct SegTree {
     S operator*() {
       return st.qry(i, j, 1, 0, st.offset-1);
     }
+
+    struct SHolder {
+      S value;
+      S *operator->() {
+        return &value;
+      }
+    };
+
     auto operator->() {
-      return lvalue_maker<S>{**this};
+      return SHolder{**this};
     }
   };
 
@@ -145,11 +142,78 @@ struct SegTree {
     if (j >= mid) upd(i, j, f, 2*I+1, mid, r);
     values[I].pull(values[2*I], values[2*I+1]);
   }
+
+  // returns max j such that cond([i, j]) = true
+  template<class Cond>
+  std::pair<S, int> walk_pre(int i, const Cond &cond) {
+    auto [s, j] = walk_pre_impl(i, cond, {}, 1, 0, offset-1);
+    return {s, std::min(j, n-1)};
+  }
+
+  // returns min i such that cond([i, j]) = true
+  template<class Cond>
+  std::pair<S, int> walk_suf(int j, const Cond &cond) {
+    return walk_suf_impl(j, cond, {}, 1, 0, offset-1);
+  }
+
+  template<class Cond>
+  std::pair<S, int> walk_pre_impl(int i, const Cond &cond, S pre, int I, int l, int r) {
+    assert(i <= r);
+
+    if (i <= l) {
+      S s;
+      s.pull(pre, values[I]);
+
+      if (cond(s))
+        return {s, r};
+
+      if (l == r)
+        return {pre, l-1};
+    }
+
+    int mid = push(I, l, r);
+
+    if (i < mid) {
+      auto [lv, l_after] = walk_pre_impl(i, cond, pre, 2*I, l, mid-1);
+      if (l_after != mid-1) return {lv, l_after};
+
+      return walk_pre_impl(i, cond, lv, 2*I+1, mid, r);
+    }
+
+    return walk_pre_impl(i, cond, pre, 2*I+1, mid, r);
+  }
+
+  template<class Cond>
+  std::pair<S, int> walk_suf_impl(int j, const Cond &cond, S suf, int I, int l, int r) {
+    assert(j >= l);
+
+    if (j >= r) {
+      S s;
+      s.pull(values[I], suf);
+
+      if (cond(s))
+        return {s, l};
+
+      if (l == r)
+        return {suf, r+1};
+    }
+
+    int mid = push(I, l, r);
+
+    if (j >= mid) {
+      auto [rv, r_first] = walk_suf_impl(j, cond, suf, 2*I+1, mid, r);
+      if (r_first != mid) return {rv, r_first};
+
+      return walk_suf_impl(j, cond, rv, 2*I, l, mid-1);
+    }
+
+    return walk_suf_impl(j, cond, suf, 2*I, l, mid-1);
+  }
 };
 
 struct S {
   ll w = 0, sum = 0; 
-  ar<ll, 2> mx = {-(1LL<<60), 0}, mx2 = {-(1LL<<60), 0};
+  std::array<ll, 2> mx = {-(1LL<<60), 0}, mx2 = {-(1LL<<60), 0};
 
   S() {}
   S(ll v) : w(1), sum(v), mx({v, 1}) {}
@@ -158,7 +222,7 @@ struct S {
     w = l.w + r.w;
     sum = l.sum + r.sum;
 
-    ar v {l.mx, l.mx2, r.mx, r.mx2};
+    std::array v {l.mx, l.mx2, r.mx, r.mx2};
     sort(v.rbegin(), v.rend());
     for (int i = 2; i >= 0; --i)
       if (v[i][0] == v[i+1][0]) v[i][1] += v[i+1][1], v[i+1] = {-(1LL<<60), 0};
@@ -178,7 +242,7 @@ struct F {
   void apply(F &f) {
     f.add += add;
     f.mn += add;
-    f.mn = min(mn, f.mn);
+    f.mn = std::min(mn, f.mn);
   }
 
   void apply(S &s) {
@@ -198,28 +262,32 @@ struct F {
 /*END_SNIPPET*/
 
 int main() {
-  cin.tie(0)->sync_with_stdio(0);
+  std::cin.tie(0)->sync_with_stdio(0);
 
-  int n; cin >> n;
-  vector<int> a(n);
-  for (int &x : a) cin >> x;
+  int n;
+  std::cin >> n;
+  std::vector<int> a(n);
+  for (int &x : a)
+    std::cin >> x;
 
   SegTree st(n, S{}, F{});
   st(0, n-1) = a;
 
-  int q; cin >> q;
+  int q;
+  std::cin >> q;
   for (int qq = 0; qq < q; ++qq) {
     int t, i, j, x;
-    cin >> t >> i >> j;
+    std::cin >> t >> i >> j;
     --i, --j;
-    if (t != 3) cin >> x;
+    if (t != 3)
+      std::cin >> x;
 
     if (t == 1) {
       st(i, j) *= {0, x};
     } else if (t == 2) {
       st(i, j) *= {x, 1LL<<60};
     } else if (t == 3) {
-      cout << st(i, j)->sum << '\n';
+      std::cout << st(i, j)->sum << '\n';
     }
   }
 }
