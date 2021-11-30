@@ -20,12 +20,20 @@ CPP_WARNINGS = (
 
 from hashlib import sha256
 import os
+import subprocess
 import click
+from time import perf_counter
 
 from .auto_path import AutoPath
 from . import DIRNAME, TMP_DIR, error
 
 INCLUDE = os.path.join(DIRNAME, 'include')
+
+def time(f):
+    t0 = perf_counter()
+    res = f()
+    tf = perf_counter()
+    return (tf-t0), res
 
 class CompileError(Exception):
     def __init__(self, exit_code):
@@ -91,9 +99,18 @@ def get_executable(*, source_path, command, force_recompile):
 @click.option('-fr', '--force-recompile', is_flag = True,
               help = 'If this flag is set, the program will be recompiled even if unneccesary.')
 @click.option('-e', '--extra-flags', default = '')
+@click.option('-T', '--testset', type = str)
+@click.option('-Ta', '--testset-auto', is_flag = True)
 @click.pass_context
-def run(ctx, source, debug_level, force_recompile, extra_flags):
+def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset_auto):
     '''Executes a program from source.'''
+
+    if testset_auto:
+        if testset is not None:
+            raise click.UsageError('Do not use --testset together with --testset-auto')
+        testset = os.path.join(os.path.dirname(source),
+                               'samples',
+                               '.'.join(os.path.basename(source).split('.')[:-1]))
 
     lang = '.' + source.rsplit('.')[-1]
 
@@ -107,14 +124,109 @@ def run(ctx, source, debug_level, force_recompile, extra_flags):
         ctx.fail(f'Unknown language {lang!r}')
 
     try:
+
         executable = get_executable(
             source_path=os.path.abspath(source),
             command=command,
             force_recompile=force_recompile
         )
-        exit_code = os.system(executable) >> 8
-        if exit_code:
-            error(f'crashed ({exit_code})')
+
+        if testset is None:
+            time_used, completed = time(
+                lambda: subprocess.run(
+                    executable,
+            ))
+
+            click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
+
+            if completed.returncode:
+                error(f'crashed ({returncode})')
+
+        else:
+
+            test_dir = os.path.dirname(testset) or './'
+            test_prefix = os.path.basename(testset)
+
+            results = []
+
+            for path in sorted(os.listdir(test_dir)):
+                if not path.startswith(test_prefix): continue
+                if not path.endswith('.in'): continue
+
+                test_name = path[:-3]
+
+                input_path = os.path.join(test_dir, f'{test_name}.in')
+                output_path = os.path.join(test_dir, f'{test_name}.ans')
+
+                with open(input_path, 'r') as file:
+                    input_data = ''.join(file)
+
+                click.secho(
+                    f'Running test {click.style(repr(test_name), fg = "yellow")} ...',
+                    err = True
+                )
+
+                time_used, completed = time(
+                    lambda: subprocess.run(
+                        executable,
+                        input = input_data.encode(),
+                        capture_output = True,
+                ))
+                results.append([test_name, '??', time_used])
+
+                output = completed.stdout.decode()
+                print(output.rstrip('\n'))
+
+                click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
+
+                if completed.returncode:
+                    results[-1][1] = 'RE'
+                    click.echo(''.join((
+                        click.style('Finished ', fg = 'red'),
+                        click.style(repr(test_name), fg = 'yellow'),
+                        click.style(f' with RE ({completed.returncode})', fg = 'red'),
+                    )), err = True)
+
+                elif os.path.exists(output_path):
+
+                    with open(output_path, 'r') as file:
+                        answer = ''.join(file)
+
+                    results[-1][1] = 'AC'
+
+                    if answer == output:
+                        click.echo(''.join((
+                            click.style('Finished ', fg = 'green'),
+                            click.style(repr(test_name), fg = 'yellow'),
+                            click.style(' with AC (exact)', fg = 'green'),
+                        )), err = True)
+                    elif answer.strip().split() == output.strip().split():
+                        click.echo(''.join((
+                            click.style('Finished ', fg = 'green'),
+                            click.style(repr(test_name), fg = 'yellow'),
+                            click.style(' with AC (up to whitespace)', fg = 'green'),
+                        )), err = True)
+                    else:
+                        results[-1][1] = 'WA'
+                        click.echo(''.join((
+                            click.style('Finished ', fg = 'red'),
+                            click.style(repr(test_name), fg = 'yellow'),
+                            click.style(' with WA', fg = 'red'),
+                        )), err = True)
+
+            click.echo('\nSummary:', err = True)
+            for name, verdict, time_used in results:
+
+                color = 'red'
+                if verdict == 'AC':
+                    color = 'green'
+                elif verdict == '??':
+                    color = 'yellow'
+
+                click.echo(f'  [{name}] ', err = True, nl = False)
+                click.secho(verdict, fg = color, bold = True, err = True, nl = False)
+                click.echo(f' {round(1000*time_used)} ms', err = True)
+
     except CompileError as exc:
         error('failed compiling.')
         return exc.exit_code
