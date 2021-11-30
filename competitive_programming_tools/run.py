@@ -3,12 +3,12 @@
 CPP_DEBUG_LEVELS = (
     '-O2',
 
-    '-O1 -g0 -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC',
+    '-O1 -g0 -DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC',
 
-    '-O0 -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover '
+    '-O0 -g3 -DENABLE_DEBUG -fsanitize=address -fsanitize=undefined -fno-sanitize-recover '
     '-fstack-protector -fsanitize-address-use-after-scope',
 
-    '-O0 -g3 -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC '
+    '-O0 -g3 -DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC '
     '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover '
     '-fstack-protector -fsanitize-address-use-after-scope',
 )
@@ -23,7 +23,7 @@ import os
 import click
 
 from .auto_path import AutoPath
-from . import DIRNAME, TMP_DIR
+from . import DIRNAME, TMP_DIR, error
 
 INCLUDE = os.path.join(DIRNAME, 'include')
 
@@ -58,7 +58,10 @@ def get_executable(*, source_path, command, force_recompile):
         with open(source_copy_path, 'w') as file:
             file.write(new_content)
 
-    if force_recompile or not os.path.exists(executable_path):
+    if force_recompile and os.path.exists(executable_path):
+        os.remove(executable_path)
+
+    if not os.path.exists(executable_path):
         click.echo(
             f'Compiling {click.style(repr(source_path), fg = "yellow")} ... ',
             err = True, nl = False
@@ -109,10 +112,9 @@ def run(ctx, source, debug_level, force_recompile, extra_flags):
             command=command,
             force_recompile=force_recompile
         )
-
-        return os.system(executable) >> 8
-
+        exit_code = os.system(executable) >> 8
+        if exit_code:
+            error(f'crashed ({exit_code})')
     except CompileError as exc:
-
-        click.secho(' FAILED COMPILING ', fg = 'white', bg = 'red', err = True)
+        error('failed compiling.')
         return exc.exit_code
