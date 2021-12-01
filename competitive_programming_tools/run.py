@@ -177,6 +177,10 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset
                 output = completed.stdout.decode()
                 print(output.rstrip('\n'))
 
+                if completed.stderr:
+                    click.secho('STDERR:', fg = 'magenta')
+                    click.echo(completed.stderr.decode(), err = True)
+
                 click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
 
                 if completed.returncode:
