@@ -12,7 +12,7 @@ class AutoPath(click.ParamType):
         if isinstance(value, click.Path):
             return value
 
-        value = os.path.join(self.root, value)
+        value = os.path.join(self.root, value.strip('\n'))
 
         attempts = (value, *(f'{value}.{suffix}' for suffix in self.suffixes))
 

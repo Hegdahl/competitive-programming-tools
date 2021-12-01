@@ -90,10 +90,7 @@ def listen(directory, port):
     t = threading.Thread(target=lambda: httpd.serve_forever(1/20))
     t.start()
 
-    if os.name == 'nt':
-        os.system('pause')
-    else:
-        os.system('read -n1 -r -p "Press any key to exit...\n" key')
+    click.pause('Press any key to continue...\n', err = True)
 
     httpd.shutdown()
     t.join()
