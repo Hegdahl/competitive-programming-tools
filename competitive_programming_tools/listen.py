@@ -50,7 +50,7 @@ def load_problem(data):
             file.write(get_snippet('main', silent=True))
 
     click.echo(click.style(f'[{name}]', fg = 'green') +
-               f' {data["timeLimit"]} ms / {data["memoryLimit"]} MB')
+               f' {data["timeLimit"]} ms / {data["memoryLimit"]} MB', err = True)
 
 class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
@@ -90,7 +90,12 @@ def listen(directory, port):
     t = threading.Thread(target=lambda: httpd.serve_forever(1/20))
     t.start()
 
-    click.pause('Press any key to continue...\n', err = True)
+    # click.pause messes up line-breaks while paused
+    #click.pause('Press any key to exit...\n', err = True)
+    if os.name == 'nt':
+        os.system('pause')
+    else:
+        os.system('read -n1 -r -p "Press any key to exit...\n" key')
 
     httpd.shutdown()
     t.join()

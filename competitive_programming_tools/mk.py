@@ -8,6 +8,7 @@ NO_EXIST = click.Path(file_okay = False, dir_okay = False)
 @click.argument('path', type = NO_EXIST)
 @click.pass_context
 def mk(ctx, path):
+    '''Create a file containing snippets/main'''
     if not path.endswith('.cpp'):
         return mk(NO_EXIST.convert(f'{path}.cpp', None, ctx))
 
@@ -18,5 +19,6 @@ def mk(ctx, path):
 
 @click.argument('path', type = NO_EXIST)
 def mke(path):
+    '''Create a file containing snippets/main and open it in $EDITOR'''
     path = mk(path)
     os.system(f'$EDITOR {path}')
