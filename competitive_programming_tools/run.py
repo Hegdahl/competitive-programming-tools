@@ -15,24 +15,28 @@ CPP_DEBUG_LEVELS = (
 
 CPP_WARNINGS = (
     '-Wall -Wextra -pedantic -Wshadow -Wformat=2 -Wfloat-equal -Wconversion '
-    '-Wlogical-op -Wshift-overflow -Wduplicated-cond -Wcast-qual -Wcast-align'
+    '-Wlogical-op -Wshift-overflow -Wduplicated-cond -Wcast-qual -Wcast-align '
+    '-Wno-variadic-macros '
 )
 
 from hashlib import sha256
 import os
 import subprocess
 import click
-from time import perf_counter
+import threading
+import time
+import queue
 
-from .auto_path import AutoPath
 from . import DIRNAME, TMP_DIR, error
+from . import auto_check
+from .auto_path import AutoPath
 
 INCLUDE = os.path.join(DIRNAME, 'include')
 
-def time(f):
-    t0 = perf_counter()
+def time_func(f):
+    t0 = time.perf_counter()
     res = f()
-    tf = perf_counter()
+    tf = time.perf_counter()
     return (tf-t0), res
 
 class CompileError(Exception):
@@ -84,6 +88,131 @@ def get_executable(*, source_path, command, force_recompile):
 
     return executable_path
 
+def interactive_subprocess(command):
+    in_queue = queue.Queue()
+    out_queue = queue.Queue()
+    exit_code = [None]
+
+    process = subprocess.Popen(
+        command,
+        shell = True,
+        stdout = subprocess.PIPE,
+        stdin = subprocess.PIPE,
+        universal_newlines = True,
+    )
+
+    def write_loop(p, q):
+        try:
+            while exit_code[0] is None:
+                try:
+                    line = q.get(timeout = 1/60)
+                    p.stdin.write(line)
+                    p.stdin.flush()
+                except queue.Empty:
+                    pass
+                exit_code[0] = p.poll()
+
+        except BrokenPipeError:
+            error(f'Broken pipe when writing to {command!r}!')
+            exit_code[0] = p.poll()
+
+    def read_loop(p, q):
+        try:
+            while exit_code[0] is None:
+                line = p.stdout.readline()
+                if line.strip():
+                    q.put(line)
+                exit_code[0] = p.poll()
+        except BrokenPipeError:
+            error(f'Broken pipe when reading from {command!r}!')
+            exit_code[0] = p.poll()
+
+    writer = threading.Thread(
+        target = write_loop,
+        args = (process, in_queue),
+    )
+    reader = threading.Thread(
+        target = read_loop,
+        args = (process, out_queue),
+    )
+
+    writer.start()
+    reader.start()
+
+    return in_queue, out_queue, writer, reader, exit_code
+
+def interact(executable, interactor, sample_in):
+    '''Run the executable together with an interactor.'''
+    (
+        interactor_in, interactor_out,
+        interactor_writer, interactor_reader,
+        interactor_exit_code
+    ) = interactive_subprocess(interactor)
+
+    (
+        executable_in, executable_out,
+        executable_writer, executable_reader,
+        executable_exit_code
+    ) = interactive_subprocess(executable)
+
+    interactor_dead = False
+    executable_dead = False
+
+    click.secho('[SAMPLE]', fg = 'yellow', bold = True)
+    for line in sample_in:
+        click.echo(line[:-1])
+        interactor_in.put(line)
+
+    def done():
+        nonlocal interactor_dead, executable_dead
+
+        if interactor_exit_code[0] is not None and not interactor_dead:
+            interactor_dead = True
+            interactor_writer.join()
+            interactor_reader.join()
+
+        if executable_exit_code[0] is not None and not executable_dead:
+            executable_dead = True
+            executable_writer.join()
+            executable_reader.join()
+
+        if interactor_exit_code[0] is None:
+            return False
+        if executable_exit_code[0] is None:
+            return False
+        if not interactor_out.empty():
+            return False
+        if not executable_out.empty():
+            return False
+
+        return True
+
+    click.secho('[INTERACTION]', fg = 'yellow', bold = True)
+    while not done():
+        try:
+            line = interactor_out.get(timeout = 1/60)
+            click.echo(click.style('[INTERACTOR]', bold = True, fg = 'magenta') + ' ' + repr(line))
+            executable_in.put(line)
+        except queue.Empty:
+            pass
+
+        try:
+            line = executable_out.get(timeout = 1/60)
+            click.echo(click.style('[EXECUTABLE]', bold = True, fg = 'blue') + ' ' + repr(line))
+            interactor_in.put(line)
+        except queue.Empty:
+            pass
+
+    if interactor_exit_code[0]:
+        error(f'Interactor exited with code {interactor_exit_code[0]}')
+    if executable_exit_code[0]:
+        error(f'Executable exited with code {executable_exit_code[0]}')
+
+    assert interactor_out.empty()
+    assert executable_out.empty()
+
+    return (interactor_exit_code[0], executable_exit_code[0])
+
 @click.argument('source', type = AutoPath(['cpp']))
 @click.option('-d', '--debug-level', type = click.IntRange(0, 3), default = 1,
               help = (
@@ -101,8 +230,9 @@ def get_executable(*, source_path, command, force_recompile):
 @click.option('-e', '--extra-flags', default = '')
 @click.option('-T', '--testset', type = str)
 @click.option('-Ta', '--testset-auto', is_flag = True)
+@click.option('-i', '--interactor', type = str)
 @click.pass_context
-def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset_auto):
+def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset_auto, interactor):
     '''Executes a program from source.'''
 
     if testset_auto:
@@ -132,15 +262,21 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset
         )
 
         if testset is None:
-            time_used, completed = time(
-                lambda: subprocess.run(
-                    executable,
-            ))
 
-            click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
+            if interactor is not None:
+                with open(0) as stdin:
+                    interact(executable, interactor, [*stdin])
 
-            if completed.returncode:
-                error(f'crashed ({returncode})')
+            else:
+                time_used, completed = time_func(
+                    lambda: subprocess.run(
+                        executable,
+                ))
+
+                click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
+
+                if completed.returncode:
+                    error(f'crashed ({completed.returncode})')
 
         else:
 
@@ -166,56 +302,70 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset
                     err = True
                 )
 
-                time_used, completed = time(
-                    lambda: subprocess.run(
-                        executable,
-                        input = input_data.encode(),
-                        capture_output = True,
-                ))
-                results.append([test_name, '??', time_used])
+                if interactor is not None:
+                    time_used, (interactor_exit_code, executable_exit_code) = time_func(
+                        lambda: interact(
+                            executable,
+                            interactor,
+                            [f'{line}\n' for line in input_data.split('\n')[:-1]]
+                        )
+                    )
 
-                output = completed.stdout.decode()
-                print(output.rstrip('\n'))
+                    fail = interactor_exit_code != 0 or executable_exit_code != 0
 
-                if completed.stderr:
-                    click.secho('STDERR:', fg = 'magenta')
-                    click.echo(completed.stderr.decode(), err = True)
+                    results.append([test_name, ['AC', 'RE'][fail], time_used])
 
-                click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
+                else:
+                    time_used, completed = time_func(
+                        lambda: subprocess.run(
+                            executable,
+                            input = input_data.encode(),
+                            capture_output = True,
+                    ))
+                    results.append([test_name, '??', time_used])
 
-                if completed.returncode:
-                    results[-1][1] = 'RE'
-                    click.echo(''.join((
-                        click.style('Finished ', fg = 'red'),
-                        click.style(repr(test_name), fg = 'yellow'),
-                        click.style(f' with RE ({completed.returncode})', fg = 'red'),
-                    )), err = True)
+                    output = completed.stdout.decode()
+                    print(output.rstrip('\n'))
 
-                elif os.path.exists(output_path):
+                    if completed.stderr:
+                        click.secho('STDERR:', fg = 'magenta')
+                        click.echo(completed.stderr.decode(), err = True)
 
-                    with open(output_path, 'r') as file:
-                        answer = ''.join(file)
+                    click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
 
-                    results[-1][1] = 'AC'
-
-                    if answer == output:
-                        click.echo(''.join((
-                            click.style('Finished ', fg = 'green'),
-                            click.style(repr(test_name), fg = 'yellow'),
-                            click.style(' with AC (exact)', fg = 'green'),
-                        )), err = True)
-                    elif answer.strip().split() == output.strip().split():
-                        click.echo(''.join((
-                            click.style('Finished ', fg = 'green'),
-                            click.style(repr(test_name), fg = 'yellow'),
-                            click.style(' with AC (up to whitespace)', fg = 'green'),
-                        )), err = True)
-                    else:
-                        results[-1][1] = 'WA'
+                    if completed.returncode:
+                        results[-1][1] = 'RE'
                         click.echo(''.join((
                             click.style('Finished ', fg = 'red'),
                             click.style(repr(test_name), fg = 'yellow'),
-                            click.style(' with WA', fg = 'red'),
+                            click.style(f' with RE ({completed.returncode})', fg = 'red'),
+                        )), err = True)
+
+                    elif os.path.exists(output_path):
+
+                        with open(output_path, 'r') as file:
+                            answer = ''.join(file)
+
+                        results[-1][1] = 'AC'
+
+                        if answer == output:
+                            click.echo(''.join((
+                                click.style('Finished ', fg = 'green'),
+                                click.style(repr(test_name), fg = 'yellow'),
+                                click.style(' with AC (exact)', fg = 'green'),
+                            )), err = True)
+                        elif answer.strip().split() == output.strip().split():
+                            click.echo(''.join((
+                                click.style('Finished ', fg = 'green'),
+                                click.style(repr(test_name), fg = 'yellow'),
+                                click.style(' with AC (up to whitespace)', fg = 'green'),
+                            )), err = True)
+                        else:
+                            results[-1][1] = 'WA'
+                            click.echo(''.join((
+                                click.style('Finished ', fg = 'red'),
+                                click.style(repr(test_name), fg = 'yellow'),
+                                click.style(' with WA', fg = 'red'),
                         )), err = True)
 
             click.echo('\nSummary:', err = True)
