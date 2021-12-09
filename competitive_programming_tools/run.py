@@ -19,6 +19,8 @@ CPP_WARNINGS = (
     '-Wno-variadic-macros '
 )
 
+IO_TIMEOUT = 1/120
+
 from hashlib import sha256
 import os
 import subprocess
@@ -88,6 +90,15 @@ def get_executable(*, source_path, command, force_recompile):
 
     return executable_path
 
+def read_ready_lines(q):
+    lines = []
+    try:
+        lines.append(q.get(timeout = IO_TIMEOUT))
+        while 1: lines.append(q.get(False))
+    except queue.Empty:
+        pass
+    return lines
+
 def interactive_subprocess(command):
     in_queue = queue.Queue()
     out_queue = queue.Queue()
@@ -103,14 +114,14 @@ def interactive_subprocess(command):
 
     def write_loop(p, q):
         try:
-            while exit_code[0] is None:
-                try:
-                    line = q.get(timeout = 1/60)
-                    p.stdin.write(line)
-                    p.stdin.flush()
-                except queue.Empty:
-                    pass
+            while 1:
                 exit_code[0] = p.poll()
+                if exit_code[0] is not None: break
+
+                lines = read_ready_lines(q)
+                if lines:
+                    p.stdin.write(''.join(lines))
+                    p.stdin.flush()
 
         except BrokenPipeError:
             error(f'Broken pipe when writing to {command!r}!')
@@ -118,14 +129,19 @@ def interactive_subprocess(command):
 
     def read_loop(p, q):
         try:
-            while exit_code[0] is None:
+            while 1:
+                exit_code[0] = p.poll()
+                if exit_code[0] is not None: break
                 line = p.stdout.readline()
                 if line.strip():
                     q.put(line)
-                exit_code[0] = p.poll()
         except BrokenPipeError:
             error(f'Broken pipe when reading from {command!r}!')
             exit_code[0] = p.poll()
+
+        for line in p.stdout:
+            if line.strip():
+                q.put(line)
 
     writer = threading.Thread(
         target = write_loop,
@@ -189,19 +205,19 @@ def interact(executable, interactor, sample_in):
 
     click.secho('[INTERACTION]', fg = 'yellow', bold = True)
     while not done():
-        try:
-            line = interactor_out.get(timeout = 1/60)
-            click.echo(click.style('[INTERACTOR]', bold = True, fg = 'magenta') + ' ' + repr(line))
-            executable_in.put(line)
-        except queue.Empty:
-            pass
+        print(interactor_exit_code, executable_exit_code)
 
-        try:
-            line = executable_out.get(timeout = 1/60)
-            click.echo(click.style('[EXECUTABLE]', bold = True, fg = 'blue') + ' ' + repr(line))
+        lines = read_ready_lines(interactor_out)
+        click.secho('[INTERACTOR] ', bold = True, fg = 'magenta', nl = False)
+        click. echo('             '.join(lines).rstrip('\n'))
+        for line in lines:
+            executable_in.put(line)
+
+        lines = read_ready_lines(executable_out)
+        click.secho('[EXECUTABLE] ', bold = True, fg = 'blue', nl = False)
+        click. echo('             '.join(lines).rstrip('\n'))
+        for line in lines:
             interactor_in.put(line)
-        except queue.Empty:
-            pass
 
     if interactor_exit_code[0]:
         error(f'Interactor exited with code {interactor_exit_code[0]}')
