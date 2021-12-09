@@ -3,7 +3,7 @@
 CPP_DEBUG_LEVELS = (
     '-O2',
 
-    '-O1 -g0 -DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC',
+    '-O1 -g3 -DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC',
 
     '-O0 -g3 -DENABLE_DEBUG -fsanitize=address -fsanitize=undefined -fno-sanitize-recover '
     '-fstack-protector -fsanitize-address-use-after-scope',
@@ -206,16 +206,18 @@ def interact(executable, interactor, sample_in):
     click.secho('[INTERACTION]', fg = 'yellow', bold = True)
     while not done():
         lines = read_ready_lines(interactor_out)
-        click.secho('[INTERACTOR] ', bold = True, fg = 'magenta', nl = False)
-        click. echo('             '.join(lines).rstrip('\n'))
-        for line in lines:
-            executable_in.put(line)
+        if lines:
+            click.secho('[INTERACTOR] ', bold = True, fg = 'magenta', nl = False)
+            click.secho('| ' + '             | '.join(lines), fg = 'yellow')
+            for line in lines:
+                executable_in.put(line)
 
         lines = read_ready_lines(executable_out)
-        click.secho('[EXECUTABLE] ', bold = True, fg = 'blue', nl = False)
-        click. echo('             '.join(lines).rstrip('\n'))
-        for line in lines:
-            interactor_in.put(line)
+        if lines:
+            click.secho('[EXECUTABLE] ', bold = True, fg = 'blue', nl = False)
+            click.echo('| ' + '             | '.join(lines))
+            for line in lines:
+                interactor_in.put(line)
 
     if interactor_exit_code[0]:
         error(f'Interactor exited with code {interactor_exit_code[0]}')
