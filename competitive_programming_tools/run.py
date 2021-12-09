@@ -205,8 +205,6 @@ def interact(executable, interactor, sample_in):
 
     click.secho('[INTERACTION]', fg = 'yellow', bold = True)
     while not done():
-        print(interactor_exit_code, executable_exit_code)
-
         lines = read_ready_lines(interactor_out)
         click.secho('[INTERACTOR] ', bold = True, fg = 'magenta', nl = False)
         click. echo('             '.join(lines).rstrip('\n'))
