@@ -45,21 +45,27 @@ struct modnum {
   friend std::ostream &operator<<(std::ostream &os, const modnum &x) { return os << x.val; }
 };
 
+template<long long M>
 struct static_mod_t {
   using type = int;
   using prod_type = long long;
-  static constexpr type MOD = 1'000'000'007;
+  static constexpr type MOD = M;
 };
 
+template<int ID>
 struct var_mod_t {
-  using type = int;
-  using prod_type = long long;
+  using type = long long;
+  using prod_type = __int128_t;
   static type MOD;
 };
-typename var_mod_t::type var_mod_t::MOD = 1;
-//typename var_mod_t::type &MOD = var_mod_t::MOD;
 
-using mint = modnum<static_mod_t>;
+//template<> typename var_mod_t<0>::type var_mod_t<0>::MOD = 1;
+//template<> typename var_mod_t<0>::type var_mod_t<0>::MOD
+// = std::uniform_int_distribution<long long>(1e17, 1e18)(rng);
+//typename var_mod_t<0>::type &MOD = var_mod_t<0>::MOD;
+//using mint = modnum<var_mod_t<0>>;
+
+using mint = modnum<static_mod_t<(int)1e9+7>>;
 /*END_SNIPPET*/
 
 int main() {
