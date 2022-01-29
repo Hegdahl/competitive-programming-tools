@@ -1,24 +1,28 @@
 #pragma GCC optimize("Ofast,unroll-loops")
-#include <bits/stdc++.h>
-#define ar array
-
-using namespace std;
-using ll = long long;
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <vector>
 
 /*BEGIN_SNIPPET*/
+template<class T = long long>
 struct Dinics {
+  static constexpr T INF = std::numeric_limits<T>::max();
+
   struct Edge {
     int to;
-    ll remain;
+    T remain;
     Edge *flipped;
   };
 
   const int n;
-  vector<map<int, ll>> tmp_graph;
-  vector<vector<Edge>> graph;
-  vector<vector<Edge*>> level_graph;
-  vector<int> dist, q;
-  vector<int> dead, vis_list;
+  std::vector<std::map<int, T>> tmp_graph;
+  std::vector<std::vector<Edge>> graph;
+  std::vector<std::vector<Edge*>> level_graph;
+  std::vector<int> dist, q;
+  std::vector<int> dead, vis_list;
 
   Dinics(int n_) : n(n_), tmp_graph(n), graph(n), level_graph(n), dist(n, -1), dead(n) {
     q.reserve(n);
@@ -26,7 +30,7 @@ struct Dinics {
   }
 
   // O(log E)
-  void connect(int i, int j, ll w) {
+  void connect(int i, int j, T w) {
     tmp_graph[i][j] += w;
     tmp_graph[j][i] += 0;
   }
@@ -36,7 +40,7 @@ struct Dinics {
     for (int i = 0; i < n; ++i)
       graph[i].resize(tmp_graph[i].size());
 
-    vector<int> sz(n);
+    std::vector<int> sz(n);
     for (int i = 0; i < n; ++i) {
       for (const auto &[j, w] : tmp_graph[i]) {
         if (i > j) continue;
@@ -94,10 +98,10 @@ struct Dinics {
   }
 
   // O(V'+E')
-  ll dfs(int cur, ll mn) {
+  T dfs(int cur, T mn) {
     vis_list.push_back(cur);
 
-    if (cur == n-1) return 1LL<<60;
+    if (cur == n-1) return INF;
 
     for (int I = (int)level_graph[cur].size()-1; I >= 0; --I) {
       Edge *e = level_graph[cur][I];
@@ -105,7 +109,7 @@ struct Dinics {
         level_graph[cur].pop_back();
         continue;
       }
-      ll nxt = min(mn, dfs(e->to, min(e->remain, mn)));
+      T nxt = std::min(mn, dfs(e->to, std::min(e->remain, mn)));
       if (nxt) {
         e->remain -= nxt;
         e->flipped->remain += nxt;
@@ -125,13 +129,13 @@ struct Dinics {
 
   // O(V'E')
   // O(E') for unit weights
-  ll blocking_flow() {
-    ll ans = 0;
+  T blocking_flow() {
+    T ans = 0;
 
-    ll mn = dfs(0, 1LL<<60);
+    T mn = dfs(0, INF);
     while (mn) {
       ans += mn;
-      mn = dfs(0, 1LL<<60);
+      mn = dfs(0, INF);
     }
 
     for (int i : vis_list)
@@ -144,9 +148,9 @@ struct Dinics {
   // O(V^2 E)
   // O(VE) for unit weights
   // O(V^.5 E) for bipartite with unit weights
-  ll solve() {
+  T solve() {
     init_graph();
-    ll ans = 0;
+    T ans = 0;
     while (init_level_graph())
       ans += blocking_flow();
     return ans;
@@ -155,7 +159,7 @@ struct Dinics {
 
 struct BipartiteMatching {
   int n, m;
-  Dinics dinics;
+  Dinics<int> dinics;
   BipartiteMatching(int n_, int m_) : n(n_), m(m_), dinics(2+n+m) {
     for (int i = 0; i < n; ++i)
       dinics.connect(0, i+1, 1);
@@ -171,9 +175,9 @@ struct BipartiteMatching {
     return (int)dinics.solve();
   }
 
-  vector<ar<int, 2>> get_matched() {
+  std::vector<std::array<int, 2>> get_matched() {
     solve();
-    vector<ar<int, 2>> res;
+    std::vector<std::array<int, 2>> res;
     for (int i = 0; i < n; ++i) {
       for (auto &e : dinics.graph[i+1]) {
         if (e.remain) continue;

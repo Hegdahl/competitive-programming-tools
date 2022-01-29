@@ -245,15 +245,12 @@ def interact(executable, interactor, sample_in):
               help = 'If this flag is set, the program will be recompiled even if unneccesary.')
 @click.option('-e', '--extra-flags', default = '')
 @click.option('-T', '--testset', type = str)
-@click.option('-Ta', '--testset-auto', is_flag = True)
 @click.option('-i', '--interactor', type = str)
 @click.pass_context
-def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset_auto, interactor):
+def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interactor):
     '''Executes a program from source.'''
 
-    if testset_auto:
-        if testset is not None:
-            raise click.UsageError('Do not use --testset together with --testset-auto')
+    if testset is None:
         testset = os.path.join(os.path.dirname(source),
                                'samples',
                                '.'.join(os.path.basename(source).split('.')[:-1]))
@@ -261,7 +258,8 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset
     lang = '.' + source.rsplit('.')[-1]
 
     GEN_COMMAND = {
-        '.cpp': lambda: f'g++ -I{INCLUDE} {CPP_WARNINGS} {CPP_DEBUG_LEVELS[debug_level]} {extra_flags}',
+        '.cpp': lambda: 'g++ -std=gnu++20 '
+        f'-I{INCLUDE} {CPP_WARNINGS} {CPP_DEBUG_LEVELS[debug_level]} {extra_flags}',
     }
 
     try:
@@ -277,7 +275,7 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, testset
             force_recompile=force_recompile
         )
 
-        if testset is None:
+        if testset == '-':
 
             if interactor is not None:
                 with open(0) as stdin:
