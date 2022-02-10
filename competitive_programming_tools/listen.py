@@ -9,9 +9,18 @@ from . import warn
 from .get import get as get_snippet
 
 def format_name(s):
-    if len(s) > 3 and s[0].isalnum() and s[0].isupper() and s[1:3] == '. ':
-        return s[0]
 
+    # Codeforces style titles
+    cf_parts = s.split('. ', 1)
+    if len(cf_parts) > 1 and 1 <= len(cf_parts[0]) <= 3 and cf_parts[0][0].isalnum():
+        return cf_parts[0].upper()
+
+    # AtCoder style titles
+    ac_parts = s.split(' - ')
+    if len(ac_parts) > 1 and 1 <= len(ac_parts[0]) <= 3 and ac_parts[0][0].isalnum():
+        return ac_parts[0]
+
+    # Everything else
     return ''.join(
         c for c in s.strip().lower().replace(' ', '_')
         if c == '-' or c == '_' or c.isalnum()
