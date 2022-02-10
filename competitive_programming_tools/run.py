@@ -23,11 +23,13 @@ IO_TIMEOUT = 1/120
 
 from hashlib import sha256
 import os
+import queue
 import subprocess
-import click
+import sys
 import threading
 import time
-import queue
+
+import click
 
 from . import DIRNAME, TMP_DIR, error
 from . import auto_check
@@ -229,6 +231,33 @@ def interact(executable, interactor, sample_in):
 
     return (interactor_exit_code[0], executable_exit_code[0])
 
+def execute(executable, input_file):
+    output_chunks = []
+
+    proc = subprocess.Popen(
+        [executable],
+        stdin = input_file,
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE,
+    )
+
+    while proc.poll() is None:
+        out, err = proc.communicate()
+        if err:
+            lines = err.decode().split('\n')
+            if not lines[-1]:
+                lines.pop(-1)
+            click.secho('STDERR | ', bold = True, fg = 'magenta', nl = False)
+            click.secho(lines[0])
+            for line in lines[1:]:
+                click.secho('       | ', bold = True, fg = 'magenta', nl = False)
+                click.secho(line)
+        if out:
+            output_chunks.append(out.decode())
+            print(out.decode(), end='', flush = True)
+
+    return proc.returncode, '.'.join(output_chunks)
+
 @click.argument('source', type = AutoPath(['cpp']))
 @click.option('-d', '--debug-level', type = click.IntRange(0, 3), default = 1,
               help = (
@@ -284,15 +313,12 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interac
                     interact(executable, interactor, [*stdin])
 
             else:
-                time_used, completed = time_func(
-                    lambda: subprocess.run(
-                        executable,
-                ))
+                time_used, (returncode, output) = time_func(lambda: execute(executable, sys.stdin))
 
                 click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
 
-                if completed.returncode:
-                    error(f'crashed ({completed.returncode})')
+                if returncode:
+                    error(f'crashed ({returncode})')
 
         else:
 
@@ -310,15 +336,15 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interac
                 input_path = os.path.join(test_dir, f'{test_name}.in')
                 output_path = os.path.join(test_dir, f'{test_name}.ans')
 
-                with open(input_path, 'r') as file:
-                    input_data = ''.join(file)
-
                 click.secho(
                     f'Running test {click.style(repr(test_name), fg = "yellow")} ...',
                     err = True
                 )
 
                 if interactor is not None:
+                    with open(input_path, 'r') as file:
+                        input_data = ''.join(file)
+
                     time_used, (interactor_exit_code, executable_exit_code) = time_func(
                         lambda: interact(
                             executable,
@@ -332,29 +358,20 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interac
                     results.append([test_name, ['AC', 'RE'][fail], time_used])
 
                 else:
-                    time_used, completed = time_func(
-                        lambda: subprocess.run(
-                            executable,
-                            input = input_data.encode(),
-                            capture_output = True,
-                    ))
+                    with open(input_path) as file:
+                        time_used, (returncode, output) = time_func(
+                            lambda: execute(executable, file)
+                        )
                     results.append([test_name, '??', time_used])
-
-                    output = completed.stdout.decode()
-                    print(output.rstrip('\n'))
-
-                    if completed.stderr:
-                        click.secho('STDERR:', fg = 'magenta')
-                        click.echo(completed.stderr.decode(), err = True)
 
                     click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
 
-                    if completed.returncode:
+                    if returncode:
                         results[-1][1] = 'RE'
                         click.echo(''.join((
                             click.style('Finished ', fg = 'red'),
                             click.style(repr(test_name), fg = 'yellow'),
-                            click.style(f' with RE ({completed.returncode})', fg = 'red'),
+                            click.style(f' with RE ({returncode})', fg = 'red'),
                         )), err = True)
 
                     elif os.path.exists(output_path):
