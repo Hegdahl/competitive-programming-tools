@@ -251,9 +251,11 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interac
     '''Executes a program from source.'''
 
     if testset is None:
-        testset = os.path.join(os.path.dirname(source),
-                               'samples',
-                               '.'.join(os.path.basename(source).split('.')[:-1]))
+        test_dir = os.path.join(os.path.dirname(source), 'samples')
+        if os.path.isdir(test_dir):
+            testset = os.path.join(test_dir, '.'.join(os.path.basename(source).split('.')[:-1]))
+        else:
+            testset = '-'
 
     lang = '.' + source.rsplit('.')[-1]
 
