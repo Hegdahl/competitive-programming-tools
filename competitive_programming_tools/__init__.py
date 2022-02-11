@@ -31,11 +31,13 @@ def flush(ctx):
     '''Clears temporary data stored by copetitive programming tools.'''
     shutil.rmtree(TMP_DIR)
 
+from .expand import expand
 from .get import get
 from .listen import listen
 from .run import run
 from .mk import mk, mke
 
+main.command()(expand)
 main.command()(get)
 main.command()(listen)
 main.command()(mk)

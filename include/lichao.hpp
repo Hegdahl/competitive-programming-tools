@@ -1,9 +1,8 @@
-#pragma GCC optimize("Ofast")
-#include <bits/stdc++.h>
+#pragma once
 
-using ll = long long;
+#include <algorithm>
+#include <vector>
 
-/*BEGIN_SNIPPET*/
 template<class F, class X>
 struct LiChao {
   struct Node {
@@ -74,63 +73,3 @@ struct LiChao {
     return I;
   }
 };
-
-struct X {
-  ll v;
-  X(ll v_) : v(v_) {}
-  X(X a, X b) : v((a.v + b.v)/2) {}
-
-  static X lo() { return {-int(1e9)}; }
-  static X hi() { return {int(1e9)}; }
-
-  friend bool operator<(const X &a, const X &b) {
-    return a.v < b.v;
-  }
-};
-
-struct F {
-  int a = 0;
-  ll b = std::numeric_limits<ll>::max();
-  ll operator()(X x) {
-    return (ll)a*x.v + b;
-  }
-};
-/*END_SNIPPET*/
-
-using namespace std;
-
-// Solution for https://old.yosupo.jp/problem/segment_add_get_min
-int main() {
-  cin.tie(0)->sync_with_stdio(0);
-
-  LiChao<F, X> lc;
-
-  int n, q;
-  cin >> n >> q;
-
-  for (int i = 0; i < n; ++i) {
-    int x0, xf, a;
-    ll b;
-    cin >> x0 >> xf >> a >> b;
-    lc.update(F{a, b}, {x0}, {xf});
-  }
-
-  for (int qq = 0; qq < q; ++qq) {
-    int t;
-    cin >> t;
-    if (t == 0) {
-      int x0, xf, a;
-      ll b;
-      cin >> x0 >> xf >> a >> b;
-      lc.update(F{a, b}, {x0}, {xf});
-    } else if (t == 1) {
-      int x;
-      cin >> x;
-      ll res = lc.query(x);
-      if (res == numeric_limits<ll>::max())
-        cout << "INFINITY\n";
-      else
-        cout << res << '\n';
-    } else assert(0);
-  }
-}

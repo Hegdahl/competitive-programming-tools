@@ -1,9 +1,8 @@
 #include <vector>
 
-/*BEGIN_SNIPPET*/
 struct UFDS {
+  std::vector<int> a;
 
-  vector<int> a;
   UFDS(int n) : a(n, -1) {}
 
   int find(int i) {
@@ -14,14 +13,10 @@ struct UFDS {
     i = find(i), j = find(j);
     if (i == j) return false;
     if (-a[i] < -a[j])
-      swap(i, j);
+      std::swap(i, j);
     a[i] += a[j];
     a[j] = i;
     return true;
   }
+
 };
-/*END_SNIPPET*/
-
-int main() {
-
-}

@@ -14,7 +14,7 @@ CPP_DEBUG_LEVELS = (
 )
 
 CPP_WARNINGS = (
-    '-Wall -Wextra -pedantic -Wshadow -Wformat=2 -Wfloat-equal -Wconversion '
+    '-Wall -Wextra -Wshadow -Wformat=2 -Wfloat-equal -Wconversion '
     '-Wlogical-op -Wshift-overflow -Wduplicated-cond -Wcast-qual -Wcast-align '
     '-Wno-variadic-macros '
 )

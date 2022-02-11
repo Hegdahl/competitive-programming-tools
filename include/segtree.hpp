@@ -1,11 +1,24 @@
-#include <bits/stdc++.h>
+#pragma once
 
-using ll = long long;
+#include <cassert>
+#include <type_traits>
+#include <vector>
 
-/*BEGIN_SNIPPET*/
 template<class S, class F = std::nullptr_t>
 struct SegTree {
+  template<class T>
+  struct check_beats {
+    struct c1 { char x[1]; };
+    struct c2 { char x[2]; };
+
+    template <typename C> static c1 test(decltype(&C::can_lazy)) ;
+    template <typename C> static c2 test(...);    
+
+    enum { value = sizeof(test<T>(0)) == sizeof(c1) };
+  };
+
   static constexpr bool is_lazy = !std::is_same<F, std::nullptr_t>::value;
+  static constexpr bool is_beats = check_beats<F>::value;
 
   int n, offset;
   std::vector<S> values;
@@ -110,8 +123,8 @@ struct SegTree {
   }
 
   S qry(int i, int j, int I, int l, int r) {
+    if (i > j) return {};
     assert(!(i > r || j < l));
-
     if (i <= l && j >= r) return values[I];
 
     int mid;
@@ -125,10 +138,16 @@ struct SegTree {
     return res;
   }
 
+  static bool can_lazy(F &f, S &s) {
+    if constexpr (is_beats)
+      return f.can_lazy(s);
+    return true;
+  }
+
   void upd(int i, int j, F f, int I, int l, int r) {
     static_assert(is_lazy);
     assert(!(i > r || j < l));
-    if (i <= l && j >= r && f.can_lazy(values[I])) {
+    if (i <= l && j >= r && can_lazy(f, values[I])) {
       f.apply(values[I]);
       if (I < offset)
         f.apply(lazy[I]);
@@ -171,7 +190,9 @@ struct SegTree {
         return {pre, l-1};
     }
 
-    int mid = push(I, l, r);
+    int mid;
+    if constexpr (is_lazy) mid = push(I, l, r);
+    else mid = l + (r-l+1)/2;
 
     if (i < mid) {
       auto [lv, l_after] = walk_pre_impl(i, cond, pre, 2*I, l, mid-1);
@@ -198,7 +219,9 @@ struct SegTree {
         return {suf, r+1};
     }
 
-    int mid = push(I, l, r);
+    int mid;
+    if constexpr (is_lazy) mid = push(I, l, r);
+    else mid = l + (r-l+1)/2;
 
     if (j >= mid) {
       auto [rv, r_first] = walk_suf_impl(j, cond, suf, 2*I+1, mid, r);
@@ -209,85 +232,5 @@ struct SegTree {
 
     return walk_suf_impl(j, cond, suf, 2*I, l, mid-1);
   }
+
 };
-
-struct S {
-  ll w = 0, sum = 0; 
-  std::array<ll, 2> mx = {-(1LL<<60), 0}, mx2 = {-(1LL<<60), 0};
-
-  S() {}
-  S(ll v) : w(1), sum(v), mx({v, 1}) {}
-
-  void pull(S l, S r) {
-    w = l.w + r.w;
-    sum = l.sum + r.sum;
-
-    std::array v {l.mx, l.mx2, r.mx, r.mx2};
-    sort(v.rbegin(), v.rend());
-    for (int i = 2; i >= 0; --i)
-      if (v[i][0] == v[i+1][0]) v[i][1] += v[i+1][1], v[i+1] = {-(1LL<<60), 0};
-    sort(v.rbegin(), v.rend());
-
-    mx = v[0], mx2 = v[1];
-  }
-};
-
-struct F {
-  ll add = 0, mn = 1LL<<60;
-
-  bool can_lazy(S s) {
-    return mn > s.mx2[0] + add;
-  }
-
-  void apply(F &f) {
-    f.add += add;
-    f.mn += add;
-    f.mn = std::min(mn, f.mn);
-  }
-
-  void apply(S &s) {
-    assert(s.mx2[0]+add < mn);
-
-    s.sum += add * s.w;
-    s.mx[0] += add;
-    s.mx2[0] += add;
-
-    if (mn > s.mx[0]) return;
-
-    ll d = s.mx[0] - mn;
-    s.sum -= d * s.mx[1];
-    s.mx[0] = mn;
-  }
-};
-/*END_SNIPPET*/
-
-int main() {
-  std::cin.tie(0)->sync_with_stdio(0);
-
-  int n;
-  std::cin >> n;
-  std::vector<int> a(n);
-  for (int &x : a)
-    std::cin >> x;
-
-  SegTree st(n, S{}, F{});
-  st(0, n-1) = a;
-
-  int q;
-  std::cin >> q;
-  for (int qq = 0; qq < q; ++qq) {
-    int t, i, j, x;
-    std::cin >> t >> i >> j;
-    --i, --j;
-    if (t != 3)
-      std::cin >> x;
-
-    if (t == 1) {
-      st(i, j) *= {0, x};
-    } else if (t == 2) {
-      st(i, j) *= {x, 1LL<<60};
-    } else if (t == 3) {
-      std::cout << st(i, j)->sum << '\n';
-    }
-  }
-}

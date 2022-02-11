@@ -1,14 +1,12 @@
-#pragma GCC optimize("Ofast,unroll-loops")
+#pragma once
+
 #include <algorithm>
-#include <array>
-#include <iostream>
 #include <limits>
 #include <map>
 #include <vector>
 
-/*BEGIN_SNIPPET*/
 template<class T = long long>
-struct Dinics {
+struct Flow {
   static constexpr T INF = std::numeric_limits<T>::max();
 
   struct Edge {
@@ -24,7 +22,7 @@ struct Dinics {
   std::vector<int> dist, q;
   std::vector<int> dead, vis_list;
 
-  Dinics(int n_) : n(n_), tmp_graph(n), graph(n), level_graph(n), dist(n, -1), dead(n) {
+  Flow(int n_) : n(n_), tmp_graph(n), graph(n), level_graph(n), dist(n, -1), dead(n) {
     q.reserve(n);
     vis_list.reserve(2*n);
   }
@@ -156,106 +154,3 @@ struct Dinics {
     return ans;
   }
 };
-
-struct BipartiteMatching {
-  int n, m;
-  Dinics<int> dinics;
-  BipartiteMatching(int n_, int m_) : n(n_), m(m_), dinics(2+n+m) {
-    for (int i = 0; i < n; ++i)
-      dinics.connect(0, i+1, 1);
-    for (int j = 0; j < m; ++j)
-      dinics.connect(j+1+n, 1+n+m, 1);
-  }
-
-  void connect(int i, int j) {
-    dinics.connect(i+1, j+1+n, 1);
-  }
-
-  int solve() {
-    return (int)dinics.solve();
-  }
-
-  std::vector<std::array<int, 2>> get_matched() {
-    solve();
-    std::vector<std::array<int, 2>> res;
-    for (int i = 0; i < n; ++i) {
-      for (auto &e : dinics.graph[i+1]) {
-        if (e.remain) continue;
-        if (e.to < 1+n) continue;
-        if (e.to >= 1+n+m) continue;
-        res.push_back({i, e.to-1-n});
-      }
-    }
-    return res;
-  }
-};
-/*END_SNIPPET*/
-
-/* https://cses.fi/problemset/task/1696/
-int main() {
-  cin.tie(0)->sync_with_stdio(0);
-
-  int L, R, M; cin >> L >> R >> M;
-  vector<ar<int, 2>> e(M);
-  for (auto &[i, j] : e)
-    cin >> i >> j, --i, --j;
-  sort(e.begin(), e.end());
-  e.erase(unique(e.begin(), e.end()), e.end());
-
-  BipartiteMatching bm(L, R);
-  for (auto [i, j] : e)
-    bm.connect(i, j);
-
-  auto res = bm.get_matched();
-  cout << res.size() << '\n';
-  for (auto [i, j] : res)
-    cout << i+1 << ' ' << j+1 << '\n';
-}
-// */
-
-//* https://judge.yosupo.jp/problem/bipartitematching
-
-const int mxM = 2e5;
-char IBUF[14*mxM], OBUF[14*mxM];
-int II = -1, OI = 0;
-
-int read() {
-  int x = 0;
-  while (++II, IBUF[II] >= '0' && IBUF[II] <= '9')
-    x = 10*x + IBUF[II]-'0';
-  return x;
-}
-
-void write(int x) {
-  int w = 1;
-  {
-    int tmp = x;
-    do { ++w; } while (tmp /= 10);
-  }
-
-  OI += w;
-  w = 1;
-  do {
-    OBUF[OI - ++w] = char(x%10 + '0');
-  } while (x /= 10);
-  OBUF[OI-1] = ' ';
-}
-
-int main() {
-  fread(IBUF, 1, sizeof(IBUF), stdin);
-  int L = read(), R = read(), M = read();
-
-  BipartiteMatching bm(L, R);
-  for (int mm = 0; mm < M; ++mm) {
-    int i = read(), j = read();
-    bm.connect(i, j);
-  }
-
-  auto res = bm.get_matched();
-  write((int)res.size());
-  for (auto [i, j] : res)
-    write(i), write(j);
-
-  fputs(OBUF, stdout);
-}
-// */

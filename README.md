@@ -45,29 +45,26 @@ export PATH=$PATH:~/.local/bin/
 
 ## Tips and Tricks
 
-### Getting snippets with a shortcut
+### Expanding local includes
 
 The command
 ```bash
-cpt get -
+cpt expand file.cpp
 ```
-reads the name of the snippet you wanna get from `stdin`, and
-```bash
-cpt get --list
-```
-lists all available snippets.
-This can be combined into something that
-asks to pick a snippet name and then prints it:
-```bash
-cpt get --list | dmenu | cpt get -
-```
-Then adding for example this:
-```vim
-nnoremap <M-s> <ESC>:read !cpt get --list \| dmenu \| cpt get - 2>/dev/null<enter><enter>
-```
-to `init.vim` lets you press a short cut (`alt`+`s` here) that opens a menu asking to select a snippet,
-and then pastes the snippet in at cursor position.
+prints the content of `file.cpp` with local includes
+(from the directory `include` in competitive programming tools)
+replaced with their contents recursively.
+This allows you to put data structures and algorithms in their
+own files and include instead of copy pasting.
 
-## Future plans
-- Add more useful snippets
-- Maybe make it work on windows
+Here is how i use it:
+```vim
+nnoremap <F9> :w<enter>:!echo %:p \| cpt expand - --tmp-file \| wl-copy<enter><enter>
+nnoremap <F10> :w<enter>:!echo %:p \| cpt expand - \| wl-copy<enter><enter>
+```
+Putting these lines in the vim configuration lets you
+hit F9 to put the expanded source code in a temporary file,
+and copies the path of the temporary file to the clipboard.
+Hitting F10 puts the expanded source code directly in the clipboard.
+I use both because it differs between online judges wether
+submitting by pasting or by uploading a file is easier.

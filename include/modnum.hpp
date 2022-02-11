@@ -1,7 +1,8 @@
-#include <cassert>
-#include <iostream>
+#pragma once
 
-/*BEGIN_SNIPPET*/
+#include <istream>
+#include <ostream>
+
 template<typename T>
 struct modnum {
   using Int = typename T::type;
@@ -58,21 +59,11 @@ struct var_mod_t {
   using prod_type = __int128_t;
   static type MOD;
 };
+template<int ID>
+typename var_mod_t<ID>::type var_mod_t<ID>::MOD = 1;
 
-//template<> typename var_mod_t<0>::type var_mod_t<0>::MOD = 1;
-//template<> typename var_mod_t<0>::type var_mod_t<0>::MOD
-// = std::uniform_int_distribution<long long>(1e17, 1e18)(rng);
-//typename var_mod_t<0>::type &MOD = var_mod_t<0>::MOD;
-//using mint = modnum<var_mod_t<0>>;
+template<int MOD = (int)1e9+7>
+using static_mint = modnum<static_mod_t<MOD>>;
 
-using mint = modnum<static_mod_t<(int)1e9+7>>;
-/*END_SNIPPET*/
-
-int main() {
-  mint v = 1;
-  for (int i = 0; i < 1e7; ++i) {
-    v *= 2;
-    assert(v/v == 1);
-  }
-  std::cout << "ok\n";
-}
+template<int ID = 0>
+using var_mint = modnum<var_mod_t<ID>>;

@@ -1,73 +1,9 @@
-#include <algorithm>
+// https://codeforces.com/contest/939/problem/F
+#include <sum_queue.hpp>
+
+#include <array>
 #include <iostream>
-#include <utility>
 #include <vector>
-
-/*BEGIN_SNIPPET*/
-template<class T, class Op>
-struct sum_stack {
-
-  const Op &op_;
-  std::vector<std::pair<T, T>> data;
-
-  sum_stack(const T &identity, const Op &op)
-    : op_(op), data{std::make_pair(identity, identity)} {}
-
-  void push(const T &x) {
-    data.push_back(std::make_pair(x, op_(data.back().second, x)));
-  }
-
-  T pop() {
-    T last = std::move(data.back().first);
-    data.pop_back();
-    return last;
-  }
-
-  T query() const {
-    return data.back().second;
-  }
-
-  int size() const {
-    return (int)data.size() - 1;
-  }
-
-};
-
-template<class T, class Op>
-struct sum_queue {
-
-  const Op &op_;
-  sum_stack<T, Op> in, out;
-
-  sum_queue(const T &identity, const Op &op)
-    : op_(op), in(identity, op), out(identity, op) {}
-
-  void push(const T &x) {
-    in.push(x);
-  }
-
-  void pop() {
-    shift();
-    out.pop();
-  }
-
-  T query() {
-    return op_(in.query(), out.query());
-  }
-
-  int size() const {
-    return in.size() + out.size();
-  }
-
-  void shift() {
-    if (out.size()) return;
-
-    while (in.size())
-      out.push(in.pop());
-  }
-
-};
-/*END_SNIPPET*/
 
 void set_min(int &place, int v) {
   if (v < place) place = v;
@@ -110,7 +46,7 @@ int main() {
       ndp[1][i] = INF;
 
     for (int b = 0; b <= 1; b++) {
-      sum_queue vals(INF, [](int a, int b) { return std::min(a, b); });
+      SumQueue vals(INF, [](int x, int y) { return std::min(x, y); });
       for (int i = 0; i < S; i++) {
         vals.push(1 + dp[1 ^ b][i]);
         vals.push(2 + dp[b][i]);
