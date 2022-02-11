@@ -5,10 +5,10 @@
 template<class V>
 struct PullFreeSegTree {
   
-  const int n, offset;
+  const int offset;
   std::vector<V> values;
 
-  PullFreeSegTree(int n_) : n(n_), offset(2<<std::__lg((n-1)|1)), values(2*offset) {}
+  PullFreeSegTree(int n) : offset(2<<std::__lg((n-1)|1)), values(2*offset) {}
 
   template<class F>
   void operator()(int i, int j, F &&f) {
