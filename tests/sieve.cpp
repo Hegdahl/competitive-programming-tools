@@ -1,5 +1,4 @@
 // https://judge.yosupo.jp/problem/enumerate_primes
-
 #include <sieve.hpp>
 
 #include <algorithm>
@@ -12,8 +11,13 @@ int main() {
 
   int N, A, B;
   std::cin >> N >> A >> B;
-  auto it = std::upper_bound(sieve.primes, sieve.primes+sieve.prime_cnt, N);
-  int cnt = int(it-sieve.primes);
+  auto it = std::upper_bound(
+    sieve.primes.begin(),
+    sieve.primes.end(),
+    N
+  );
+
+  int cnt = int(it-sieve.primes.begin());
 
   std::vector<int> ans;
   for (int i = B; i < cnt; i += A)

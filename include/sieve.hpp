@@ -1,38 +1,60 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 template<int N>
 struct Sieve {
-  static constexpr int max_primes = int(1.6 * N / (int)std::__lg(N+1))+ 10;
-  static int smallest_factor[N+1];
-  static int primes[max_primes+1];
-  int prime_cnt = 0;
+  static constexpr int sqrt = std::ceil(std::sqrt(N+1));
+  std::vector<int> primes;
 
-  constexpr Sieve(int) {
-    for (int i=2; i <= N; ++i) {
-      if (smallest_factor[i] == 0) {
-        smallest_factor[i] = i;
-        primes[prime_cnt++] = i;
+  Sieve() {
+    primes.clear();
+
+    char is_composite[sqrt]{};
+
+    for (int i = 2; i < sqrt; ++i) {
+      if (is_composite[i]) {
+        is_composite[i] = false;
+        continue;
       }
-      for (int j=0; j < prime_cnt && primes[j] <= smallest_factor[i] && i*primes[j] <= N; ++j)
-        smallest_factor[i * primes[j]] = primes[j];
+      primes.push_back(i);
+      for (int j = 2*i; j < sqrt; j += i)
+        is_composite[j] = true;
+    }
+
+    std::vector<int> small_primes = primes;
+
+    for (int start = sqrt; start <= N; start += sqrt) {
+      int stop = std::min(start+sqrt, N+1);
+
+      for (int p : small_primes) {
+        for (int i = (start+p-1)/p*p; i < stop; i += p)
+          is_composite[i-start] = true;
+      }
+
+      for (int i = start; i < stop; ++i)
+        if (!is_composite[i-start])
+          primes.push_back(i);
+        else
+          is_composite[i-start] = false;
     }
   }
 
-  Sieve() : Sieve(0) {}
+  int next_prime(int x) {
+    auto it = std::upper_bound(primes.begin(), primes.end(), x);
+    if (it == primes.end()) return -1;
+    return *it;
+  }
 
-  std::vector<int> factor(int x) {
-    std::vector<int> res;
-    while (x > 1) {
-      res.push_back(smallest_factor[x]);
-      x /= res.back();
-    }
-    return res;
+  int prev_prime(int x) {
+    auto it = std::lower_bound(primes.begin(), primes.end(), x);
+    if (it == primes.begin()) return -1;
+    return *--it;
+  }
+
+  bool is_prime(int x) {
+    return next_prime(x-1) == x;
   }
 };
-
-template<int N>
-int Sieve<N>::smallest_factor[N+1];
-template<int N>
-int Sieve<N>::primes[Sieve<N>::max_primes+1];
