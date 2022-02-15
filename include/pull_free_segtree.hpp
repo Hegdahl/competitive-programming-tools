@@ -24,4 +24,16 @@ struct PullFreeSegTree {
       f(values[i]);
   }
 
+  template<class Push, class Pop, class Callback>
+  void dfs(Push &&push, Pop &&pop, Callback &&callback, int I = 1) {
+    push(values[I]);
+    if (I < offset) {
+      dfs(push, pop, callback, 2*I);
+      dfs(push, pop, callback, 2*I+1);
+    } else {
+      callback(I-offset);
+    }
+    pop(values[I]);
+  }
+
 };
