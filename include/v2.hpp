@@ -1,7 +1,8 @@
 #pragma once
 
-#include <numeric>
+#include <cmath>
 #include <istream>
+#include <numeric>
 #include <ostream>
  
 template<class T = long long>
@@ -39,6 +40,10 @@ struct V2 {
   constexpr friend T cross(const V2 &a, const V2 &b) {
     return a.x * b.y - a.y * b.x;
   }
+
+  constexpr T centered_cross(const V2 &a, const V2 &b) const {
+    return cross(a-*this, b-*this);
+  }
  
   constexpr friend T dot(const V2 &a, const V2 &b) {
     return a.x * b.x + a.y * b.y;
@@ -46,6 +51,10 @@ struct V2 {
   
   constexpr T mag2() const {
     return x*x + y*y;
+  }
+
+  constexpr T mag() const {
+    return std::sqrt(mag2());
   }
  
   constexpr int quadrant() const {
@@ -91,4 +100,9 @@ struct V2 {
   friend std::ostream &operator<<(std::ostream &os, const V2 &v) {
     return os << '(' << v.x << ',' << v.y << ')';
   }
+
+  friend std::istream &operator>>(std::istream &is, V2 &v) {
+    return is >> v.x >> v.y;
+  }
+
 };
