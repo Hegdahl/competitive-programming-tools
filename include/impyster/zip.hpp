@@ -1,5 +1,8 @@
 #pragma once
 
+#include <impyster/containers.hpp>
+
+#include <iterator>
 #include <tuple>
 #include <utility>
 
@@ -16,21 +19,30 @@ class zip_impl {
     using eat = int[];
 
     template<std::size_t...indices>
-      auto begin_impl(std::integer_sequence<std::size_t, indices...>) {
-        return std::make_tuple(std::get<indices>(iterables_).begin()...);
-      }
+    auto begin_impl(std::integer_sequence<std::size_t, indices...>) {
+      return std::make_tuple(std::get<indices>(iterables_).begin()...);
+    }
 
     template<std::size_t...indices>
-      auto end_impl(std::integer_sequence<std::size_t, indices...>) {
-        return std::make_tuple(std::get<indices>(iterables_).end()...);
-      }
+    auto end_impl(std::integer_sequence<std::size_t, indices...>) {
+      return std::make_tuple(std::get<indices>(iterables_).end()...);
+    }
+
+    template<std::size_t...indices>
+    auto get_iter_value(std::integer_sequence<std::size_t, indices...> seq) {
+      return tie_or_copy(*std::get<indices>(begin_impl(seq))...);
+    }
 
   public:
     zip_impl(T iterables)
       : iterables_(std::move(iterables)) {}
 
-    class iterator {
+    class iterator
+      : public std::iterator<std::input_iterator_tag,
+          decltype(std::declval<zip_impl>().get_iter_value(all_indices{}))> {
+
       public:
+        iterator() {}
         template<class U>
         iterator(U iterators) : iterators_(std::move(iterators)) {}
 
@@ -38,13 +50,27 @@ class zip_impl {
           return deref_impl(all_indices{});
         }
 
+        auto operator*() const {
+          return deref_impl(all_indices{});
+        }
+
         friend auto operator!=(const iterator &l, const iterator &r) {
           return neq_impl(l, r, all_indices{});
         }
 
-        auto operator++() {
+        friend auto operator==(const iterator &l, const iterator &r) {
+          return !neq_impl(l, r, all_indices{});
+        }
+
+        auto &operator++() {
           incr_impl(all_indices{});
           return *this;
+        }
+
+        auto operator++(int) {
+          auto cpy = *this;
+          incr_impl(all_indices{});
+          return cpy;
         }
 
       private:
@@ -52,7 +78,12 @@ class zip_impl {
 
         template<std::size_t...indices>
         auto deref_impl(std::integer_sequence<std::size_t, indices...>) {
-          return std::make_tuple(*std::get<indices>(iterators_)...);
+          return tie_or_copy(*std::get<indices>(iterators_)...);
+        }
+
+        template<std::size_t...indices>
+        auto deref_impl(std::integer_sequence<std::size_t, indices...>) const {
+          return tie_or_copy(*std::get<indices>(iterators_)...);
         }
 
         template<std::size_t...indices>
@@ -80,7 +111,7 @@ class zip_impl {
 
 template<class...Args>
 auto zip(Args&&...args) {
-  return internal::zip_impl(std::tuple<Args...>(std::forward<Args>(args)...));
+  return internal::zip_impl(tie_or_copy(std::forward<Args>(args)...));
 }
 
 } // namespace impyster

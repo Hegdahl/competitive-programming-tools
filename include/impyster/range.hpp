@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iterator>
+
 namespace impyster {
 
 template<class T>
@@ -12,11 +14,12 @@ class range {
     range(T stop)
       : range(0, stop) {}
 
-    class iterator {
+    class iterator : public std::iterator<std::input_iterator_tag, T> {
       public:
-        iterator(range &r, T current) : range_(r), current_(current) {}
+        iterator() : range_(0), current_(0) {}
+        iterator(range * r, T current) : range_(r), current_(current) {}
 
-        T operator*() {
+        T operator*() const {
           return current_;
         }
 
@@ -24,22 +27,32 @@ class range {
           return l.current_ != r.current_;
         }
 
-        auto operator++() {
-          current_ += range_.step_;
+        friend bool operator==(const iterator &l, const iterator &r) {
+          return l.current_ == r.current_;
+        }
+
+        auto &operator++() {
+          current_ += range_->step_;
           return *this;
         }
 
+        auto operator++(int) {
+          auto cpy = this;
+          current_ += range_->step_;
+          return cpy;
+        }
+
       private:
-        range &range_;
+        range * range_;
         T current_;
     };
 
     auto begin() {
-      return iterator(*this, start_);
+      return iterator(this, start_);
     }
 
     auto end() {
-      return iterator(*this, start_ + (stop_-start_+step_-1) / step_ * step_);
+      return iterator(this, start_ + (stop_-start_+step_-1) / step_ * step_);
     }
 
   private:
