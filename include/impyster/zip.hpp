@@ -17,12 +17,12 @@ class zip_impl {
 
     template<std::size_t...indices>
       auto begin_impl(std::integer_sequence<std::size_t, indices...>) {
-        return std::make_tuple(get<indices>(iterables_).begin()...);
+        return std::make_tuple(std::get<indices>(iterables_).begin()...);
       }
 
     template<std::size_t...indices>
       auto end_impl(std::integer_sequence<std::size_t, indices...>) {
-        return std::make_tuple(get<indices>(iterables_).end()...);
+        return std::make_tuple(std::get<indices>(iterables_).end()...);
       }
 
   public:
@@ -31,7 +31,8 @@ class zip_impl {
 
     class iterator {
       public:
-        iterator(auto iterators) : iterators_(iterators) {}
+        template<class U>
+        iterator(U iterators) : iterators_(std::move(iterators)) {}
 
         auto operator*() {
           return deref_impl(all_indices{});
@@ -51,18 +52,18 @@ class zip_impl {
 
         template<std::size_t...indices>
         auto deref_impl(std::integer_sequence<std::size_t, indices...>) {
-          return std::make_tuple(*get<indices>(iterators_)...);
+          return std::make_tuple(*std::get<indices>(iterators_)...);
         }
 
         template<std::size_t...indices>
         void incr_impl(std::integer_sequence<std::size_t, indices...>) {
-          std::ignore = eat{(++get<indices>(iterators_), 0)...};
+          std::ignore = eat{(++std::get<indices>(iterators_), 0)...};
         }
 
         template<std::size_t...indices>
         static bool neq_impl(const iterator &l, const iterator &r,
             std::integer_sequence<std::size_t, indices...>) {
-          return (true && ... && (get<indices>(l.iterators_) != get<indices>(r.iterators_)));
+          return (true && ... && (std::get<indices>(l.iterators_) != std::get<indices>(r.iterators_)));
         }
     };
 
