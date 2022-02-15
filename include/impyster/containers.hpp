@@ -22,8 +22,6 @@ template<class T>
 struct is_already_outputable : std::false_type {};
 template<>
 struct is_already_outputable<std::string> : std::true_type {};
-template<>
-struct is_already_outputable<const std::string> : std::true_type {};
 template<class T>
 constexpr bool is_already_outputable_v = is_already_outputable<T>::value;
 
@@ -34,21 +32,65 @@ struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin())>> : std::t
 template<class T>
 constexpr bool is_iterable_v = is_iterable<T>::value;
 
+template<int I, class...Ts>
+void read_tuple(std::istream &is, std::tuple<Ts...> &t) {
+  if constexpr (I < sizeof...(Ts)) {
+    is >> std::get<I>(t);
+    read_tuple<I+1>(is, t);
+  }
+}
+
+template<int I, class...Ts>
+void read_tuple(std::istream &is, const std::tuple<Ts...> &t) {
+  if constexpr (I < sizeof...(Ts)) {
+    is >> std::get<I>(t);
+    read_tuple<I+1>(is, t);
+  }
+}
+
+template<int I, class...Ts>
+void print_tuple(std::ostream &os, const std::tuple<Ts...> &t) {
+  if constexpr (I < sizeof...(Ts)) {
+    if constexpr (I)
+      os << ' ';
+    os << std::get<I>(t);
+    print_tuple<I+1>(os, t);
+  }
+}
+
 } // namespace internal
 
 template<class T>
-requires (internal::is_iterable_v<T> && !internal::is_already_inputable_v<T>)
-std::istream &operator>>(std::istream &is, T &container) {
-  for (auto &v : container)
+requires (internal::is_iterable_v<T> && !internal::is_already_inputable_v<std::remove_cvref_t<T>>)
+std::istream &operator>>(std::istream &is, T &&container) {
+  for (auto &&v : container)
     is >> v;
   return is;
 }
 
 template<class T>
-requires (internal::is_iterable_v<T> && !internal::is_already_outputable_v<std::remove_reference_t<T>>)
+requires (internal::is_iterable_v<T> && !internal::is_already_outputable_v<std::remove_cvref_t<T>>)
 std::ostream &operator<<(std::ostream &os, T &&container) {
   for (auto &&v : container)
     os << v << ' ';
+  return os;
+}
+
+template<class...Ts>
+std::istream &operator>>(std::istream &is, std::tuple<Ts...> &t) {
+  internal::read_tuple<0>(is, t);
+  return is;
+}
+
+template<class...Ts>
+std::istream &operator>>(std::istream &is, const std::tuple<Ts...> &t) {
+  internal::read_tuple<0>(is, t);
+  return is;
+}
+
+template<class...Ts>
+std::ostream &operator<<(std::ostream &os, const std::tuple<Ts...> &t) {
+  internal::print_tuple<0>(os, t);
   return os;
 }
 

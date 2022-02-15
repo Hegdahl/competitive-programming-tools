@@ -17,7 +17,7 @@ class range {
     class iterator : public std::iterator<std::input_iterator_tag, T> {
       public:
         iterator() : range_(0), current_(0) {}
-        iterator(range * r, T current) : range_(r), current_(current) {}
+        iterator(const range * r, T current) : range_(r), current_(current) {}
 
         T operator*() const {
           return current_;
@@ -43,15 +43,15 @@ class range {
         }
 
       private:
-        range * range_;
+        const range * range_;
         T current_;
     };
 
-    auto begin() {
+    auto begin() const {
       return iterator(this, start_);
     }
 
-    auto end() {
+    auto end() const {
       return iterator(this, start_ + (stop_-start_+step_-1) / step_ * step_);
     }
 

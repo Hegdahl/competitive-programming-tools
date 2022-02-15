@@ -19,17 +19,17 @@ class zip_impl {
     using eat = int[];
 
     template<std::size_t...indices>
-    auto begin_impl(std::integer_sequence<std::size_t, indices...>) {
+    auto begin_impl(std::integer_sequence<std::size_t, indices...>) const {
       return std::make_tuple(std::get<indices>(iterables_).begin()...);
     }
 
     template<std::size_t...indices>
-    auto end_impl(std::integer_sequence<std::size_t, indices...>) {
+    auto end_impl(std::integer_sequence<std::size_t, indices...>) const {
       return std::make_tuple(std::get<indices>(iterables_).end()...);
     }
 
     template<std::size_t...indices>
-    auto get_iter_value(std::integer_sequence<std::size_t, indices...> seq) {
+    auto get_iter_value(std::integer_sequence<std::size_t, indices...> seq) const {
       return tie_or_copy(*std::get<indices>(begin_impl(seq))...);
     }
 
@@ -98,11 +98,11 @@ class zip_impl {
         }
     };
 
-    auto begin() {
+    auto begin() const {
       return iterator(begin_impl(all_indices{}));
     }
 
-    auto end() {
+    auto end() const {
       return iterator(end_impl(all_indices{}));
     }
 };
