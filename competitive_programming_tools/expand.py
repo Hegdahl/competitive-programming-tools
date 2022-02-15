@@ -14,7 +14,8 @@ def get_inner_path(line):
     match = include_matcher.match(line)
     if not match: return None, None
     path = os.path.join(INCLUDE, match.group(2))
-    if not os.path.isfile(path): return None, None
+    if not os.path.isfile(path):
+        return None, None
     return path, match.group(2)
 
 def should_skip(line, is_source):
@@ -35,9 +36,9 @@ def expand_impl(path, already_included, is_source = True):
 
             inner_path, inner_name = get_inner_path(line)
 
-            if inner_path is None or inner_name in already_included:
+            if inner_path is None:
                 res.append(line)
-            else:
+            elif not inner_name in already_included:
                 already_included.add(inner_name)
                 res.append(f'// <{inner_name}>\n')
                 res.append(expand_impl(inner_path, already_included, False))
