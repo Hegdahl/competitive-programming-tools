@@ -101,13 +101,13 @@ def read_ready_lines(q):
         pass
     return lines
 
-def interactive_subprocess(command):
+def interactive_subprocess(command, argv = ()):
     in_queue = queue.Queue()
     out_queue = queue.Queue()
     exit_code = [None]
 
     process = subprocess.Popen(
-        command,
+        ' '.join((command, *argv)),
         shell = True,
         stdout = subprocess.PIPE,
         stdin = subprocess.PIPE,
@@ -159,13 +159,13 @@ def interactive_subprocess(command):
 
     return in_queue, out_queue, writer, reader, exit_code
 
-def interact(executable, interactor, sample_in):
+def interact(executable, interactor, argv, sample_in):
     '''Run the executable together with an interactor.'''
     (
         interactor_in, interactor_out,
         interactor_writer, interactor_reader,
         interactor_exit_code
-    ) = interactive_subprocess(interactor)
+    ) = interactive_subprocess(interactor, argv)
 
     (
         executable_in, executable_out,
@@ -231,11 +231,11 @@ def interact(executable, interactor, sample_in):
 
     return (interactor_exit_code[0], executable_exit_code[0])
 
-def execute(executable, input_file):
+def execute(executable, argv, input_file):
     output_chunks = []
 
     proc = subprocess.Popen(
-        [executable],
+        [executable, *argv],
         stdin = input_file,
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE,
@@ -259,6 +259,7 @@ def execute(executable, input_file):
     return proc.returncode, '.'.join(output_chunks)
 
 @click.argument('source', type = AutoPath(['cpp']))
+@click.argument('argv', nargs = -1)
 @click.option('-d', '--debug-level', type = click.IntRange(0, 3), default = 1,
               help = (
                   '\b\n'
@@ -276,7 +277,7 @@ def execute(executable, input_file):
 @click.option('-T', '--testset', type = str)
 @click.option('-i', '--interactor', type = str)
 @click.pass_context
-def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interactor):
+def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, interactor):
     '''Executes a program from source.'''
 
     if testset is None:
@@ -310,10 +311,10 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interac
 
             if interactor is not None:
                 with open(0) as stdin:
-                    interact(executable, interactor, [*stdin])
+                    interact(executable, interactor, argv, [*stdin])
 
             else:
-                time_used, (returncode, output) = time_func(lambda: execute(executable, sys.stdin))
+                time_used, (returncode, output) = time_func(lambda: execute(executable, argv, sys.stdin))
 
                 click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
 
@@ -349,6 +350,7 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interac
                         lambda: interact(
                             executable,
                             interactor,
+                            argv,
                             [f'{line}\n' for line in input_data.split('\n')[:-1]]
                         )
                     )
@@ -360,7 +362,7 @@ def run(ctx, source, debug_level, force_recompile, extra_flags, testset, interac
                 else:
                     with open(input_path) as file:
                         time_used, (returncode, output) = time_func(
-                            lambda: execute(executable, file)
+                            lambda: execute(executable, argv, file)
                         )
                     results.append([test_name, '??', time_used])
 
