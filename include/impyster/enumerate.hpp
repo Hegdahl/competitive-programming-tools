@@ -10,7 +10,7 @@ namespace impyster {
 template<class T>
 auto enumerate(T &&iterable) {
   return zip(
-    range(std::numeric_limits<long long>::max()),
+    range(std::numeric_limits<long long>::max()/2),
     std::forward<T>(iterable)
   );
 }
