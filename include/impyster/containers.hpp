@@ -12,6 +12,9 @@ namespace impyster {
 namespace internal {
 
 template<class T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
+template<class T>
 struct is_already_inputable : std::false_type {};
 template<>
 struct is_already_inputable<std::string> : std::true_type {};
@@ -60,16 +63,16 @@ void print_tuple(std::ostream &os, const std::tuple<Ts...> &t) {
 
 } // namespace internal
 
-template<class T>
-requires (internal::is_iterable_v<T> && !internal::is_already_inputable_v<std::remove_cvref_t<T>>)
+template<class T, class = std::enable_if_t<
+internal::is_iterable_v<T> && !internal::is_already_inputable_v<internal::remove_cvref_t<T>>>>
 std::istream &operator>>(std::istream &is, T &&container) {
   for (auto &&v : container)
     is >> v;
   return is;
 }
 
-template<class T>
-requires (internal::is_iterable_v<T> && !internal::is_already_outputable_v<std::remove_cvref_t<T>>)
+template<class T, class = std::enable_if_t<
+internal::is_iterable_v<T> && !internal::is_already_outputable_v<internal::remove_cvref_t<T>>>>
 std::ostream &operator<<(std::ostream &os, T &&container) {
   for (auto &&v : container)
     os << v << ' ';
