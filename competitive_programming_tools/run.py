@@ -402,8 +402,8 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
                             if checker_result.warnings:
                                 results[-1][1] += click.style(' (with warnings)', fg = 'yellow')
 
-                            for name, error in checker_result.warnings.items():
-                                warn(f'{name}: {error}')
+                            for name, err in checker_result.warnings.items():
+                                warn(f'{name}: {err}')
                         else:
                             click.echo(''.join((
                                 click.style('Finished ', fg = 'green'),
