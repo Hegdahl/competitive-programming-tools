@@ -28,7 +28,7 @@ def main(ctx):
 @main.command()
 @click.pass_context
 def flush(ctx):
-    '''Clears temporary data stored by copetitive programming tools.'''
+    '''Clears temporary data stored by competitive programming tools.'''
     shutil.rmtree(TMP_DIR)
 
 from .expand import expand

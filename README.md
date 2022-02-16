@@ -11,7 +11,8 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  flush   Clears temporary data stored by copetitive programming tools.
+  expand  Replace cpt includes with source code (for submission to online...
+  flush   Clears temporary data stored by competitive programming tools.
   get     Given a the name of a snippet, print the content it to stdout.
   listen  Listen for information about problems from the "Competitive...
   mk      Create a file containing snippets/main
