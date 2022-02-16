@@ -31,9 +31,9 @@ import time
 
 import click
 
-from . import DIRNAME, TMP_DIR, error
-from . import auto_check
+from . import DIRNAME, TMP_DIR, error, warn
 from .auto_path import AutoPath
+from .lenient_checker import LenientChecker
 
 INCLUDE = os.path.join(DIRNAME, 'include')
 
@@ -364,12 +364,12 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
                         time_used, (returncode, output) = time_func(
                             lambda: execute(executable, argv, file)
                         )
-                    results.append([test_name, '??', time_used])
+                    results.append([test_name, click.style('??', fg = 'yellow'), time_used])
 
                     click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
 
                     if returncode:
-                        results[-1][1] = 'RE'
+                        results[-1][1] = click.style('RE', 'red')
                         click.echo(''.join((
                             click.style('Finished ', fg = 'red'),
                             click.style(repr(test_name), fg = 'yellow'),
@@ -377,43 +377,44 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
                         )), err = True)
 
                     elif os.path.exists(output_path):
+                        results[-1][1] = click.style('AC', fg = 'green')
 
                         with open(output_path, 'r') as file:
                             answer = ''.join(file)
+                        
+                        checker_result = LenientChecker(output, answer)
 
-                        results[-1][1] = 'AC'
+                        if not checker_result.accept:
+                            results[-1][1] = click.style('WA', fg = 'red')
+                            click.echo(''.join((
+                                click.style('Finished ', fg = 'red'),
+                                click.style(repr(test_name), fg = 'yellow'),
+                                click.style(' with WA', fg = 'red'),
+                            )), err = True)
+                        elif checker_result.ignored_properties:
+                            ignore_str = ', '.join(checker_result.ignored_properties)
+                            click.echo(''.join((
+                                click.style('Finished ', fg = 'green'),
+                                click.style(repr(test_name), fg = 'yellow'),
+                                click.style(f' with AC (ignored: {ignore_str})', fg = 'green'),
+                            )), err = True)
 
-                        if answer == output:
+                            if checker_result.warnings:
+                                results[-1][1] += click.style(' (with warnings)', fg = 'yellow')
+
+                            for name, error in checker_result.warnings.items():
+                                warn(f'{name}: {error}')
+                        else:
                             click.echo(''.join((
                                 click.style('Finished ', fg = 'green'),
                                 click.style(repr(test_name), fg = 'yellow'),
                                 click.style(' with AC (exact)', fg = 'green'),
                             )), err = True)
-                        elif answer.strip().split() == output.strip().split():
-                            click.echo(''.join((
-                                click.style('Finished ', fg = 'green'),
-                                click.style(repr(test_name), fg = 'yellow'),
-                                click.style(' with AC (up to whitespace)', fg = 'green'),
-                            )), err = True)
-                        else:
-                            results[-1][1] = 'WA'
-                            click.echo(''.join((
-                                click.style('Finished ', fg = 'red'),
-                                click.style(repr(test_name), fg = 'yellow'),
-                                click.style(' with WA', fg = 'red'),
-                        )), err = True)
 
             click.echo('\nSummary:', err = True)
             for name, verdict, time_used in results:
-
-                color = 'red'
-                if verdict == 'AC':
-                    color = 'green'
-                elif verdict == '??':
-                    color = 'yellow'
-
                 click.echo(f'  [{name}] ', err = True, nl = False)
-                click.secho(verdict, fg = color, bold = True, err = True, nl = False)
+                click.secho(verdict, bold = True, err = True, nl = False)
                 click.echo(f' {round(1000*time_used)} ms', err = True)
 
     except CompileError as exc:
