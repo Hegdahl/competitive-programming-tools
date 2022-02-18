@@ -21,7 +21,7 @@ CPP_WARNINGS = (
 
 IO_TIMEOUT = 1/120
 
-from hashlib import sha256
+from hashlib import sha1
 import os
 import queue
 import subprocess
@@ -54,11 +54,11 @@ def get_executable(*, source_path, command, force_recompile):
     by compiling, or using previously compiled executable.
     '''
 
-    source_id = sha256(source_path.encode()).hexdigest()
-    command_id = sha256(command.encode()).hexdigest()
+    source_id = sha1(source_path.encode()).hexdigest()[:16]
+    command_id = sha1(command.encode()).hexdigest()[:16]
 
-    source_copy_path = os.path.join(TMP_DIR, '-'.join((source_id, command_id, 'SOURCE')))
-    executable_path = os.path.join(TMP_DIR, '-'.join((source_id, command_id, 'EXECUTABLE')))
+    source_copy_path = os.path.join(TMP_DIR, '-'.join((source_id, command_id, 'SRC')))
+    executable_path = os.path.join(TMP_DIR, '-'.join((source_id, command_id, 'EXE')))
 
     old_content = ''
 
@@ -303,7 +303,7 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
     try:
 
         executable = get_executable(
-            source_path=os.path.abspath(source),
+            source_path=source,
             command=command,
             force_recompile=force_recompile
         )
