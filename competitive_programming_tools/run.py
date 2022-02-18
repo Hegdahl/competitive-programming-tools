@@ -259,6 +259,14 @@ def execute(executable, argv, input_file):
 
     return proc.returncode, '.'.join(output_chunks)
 
+def run_diagnostic(executable, argv, input_file):
+    proc = subprocess.Popen(
+        ' '.join(('gdb', '-batch', '-ex', '"run"', '-ex', '"bt"', executable, *argv)),
+        shell = True,
+        stdin = input_file
+    )
+    proc.wait()
+
 @click.argument('source', type = AutoPath(['cpp']))
 @click.argument('argv', nargs = -1)
 @click.option('-d', '--debug-level', type = click.IntRange(0, 3), default = 1,
@@ -371,6 +379,9 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
 
                     if returncode:
                         results[-1][1] = click.style('RE', 'red')
+                        click.secho('[DIAGNOSTIC]', bold = True, fg = 'yellow')
+                        with open(input_path) as file:
+                            run_diagnostic(executable, argv, file)
                         click.echo(''.join((
                             click.style('Finished ', fg = 'red'),
                             click.style(repr(test_name), fg = 'yellow'),
