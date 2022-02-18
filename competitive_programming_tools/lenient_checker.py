@@ -30,7 +30,7 @@ class LenientChecker:
             j_tokens = whitespace_chunk.split(judge_answer.strip())
 
         if len(p_tokens) != len(j_tokens):
-            return False;
+            return
 
         for p_token, j_token in zip(p_tokens, j_tokens):
             if p_token == j_token:
