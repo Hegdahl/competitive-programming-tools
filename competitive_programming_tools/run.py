@@ -261,7 +261,7 @@ def execute(executable, argv, input_file):
 
 def run_diagnostic(executable, argv, input_file):
     proc = subprocess.Popen(
-        ' '.join(('gdb', '-batch', '-ex', '"run"', '-ex', '"bt"', executable, *argv)),
+        ' '.join(('gdb -batch -ex "run" -ex "bt"', executable, *argv)),
         shell = True,
         stdin = input_file
     )
