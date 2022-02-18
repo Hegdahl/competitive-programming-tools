@@ -32,12 +32,14 @@ def flush(ctx):
     shutil.rmtree(TMP_DIR)
 
 from .expand import expand
+from .diff import diff
 from .get import get
 from .listen import listen
 from .run import run
 from .mk import mk, mke
 
 main.command()(expand)
+main.command()(diff)
 main.command()(get)
 main.command()(listen)
 main.command()(mk)

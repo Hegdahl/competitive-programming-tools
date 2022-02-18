@@ -34,6 +34,7 @@ import click
 from . import DIRNAME, TMP_DIR, error, warn
 from .auto_path import AutoPath
 from .lenient_checker import LenientChecker
+from .diff import diff_str
 
 INCLUDE = os.path.join(DIRNAME, 'include')
 
@@ -385,6 +386,8 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
                         checker_result = LenientChecker(output, answer)
 
                         if not checker_result.accept:
+                            click.secho('[DIFF]', bold = True, fg = 'yellow', err = True)
+                            click.echo(diff_str(answer, output), err = True, nl = False)
                             results[-1][1] = click.style('WA', fg = 'red')
                             click.echo(''.join((
                                 click.style('Finished ', fg = 'red'),

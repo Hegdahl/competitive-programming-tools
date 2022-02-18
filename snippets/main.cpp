@@ -1,4 +1,6 @@
 /*BEGIN_SNIPPET*/
+#include <impyster.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -11,6 +13,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+using namespace impyster;
 
 int main() {
   std::cin.tie(0)->sync_with_stdio(0);

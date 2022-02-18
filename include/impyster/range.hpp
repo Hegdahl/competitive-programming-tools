@@ -1,14 +1,22 @@
 #pragma once
 
+#include <cassert>
 #include <iterator>
 
 namespace impyster {
 
 template<class T>
+T round_away_from_zero_to_multiple(T val, T div) {
+  if (val < 0) return -round_away_from_zero_to_multiple(-val, div);
+  if (div < 0) return round_away_from_zero_to_multiple(val, -div);
+  return (val + div - 1) / div * div;
+}
+
+template<class T>
 class range {
   public:
     range(T start, T stop, T step)
-      : start_(start), stop_(stop), step_(step) {}
+      : start_(start), stop_(wrong_direction(start, stop, step) ? start : stop), step_(step) {}
     range(T start, T stop)
       : range(start, stop, 1) {}
     range(T stop)
@@ -52,10 +60,16 @@ class range {
     }
 
     auto end() const {
-      return iterator(this, start_ + (stop_-start_+step_-1) / step_ * step_);
+      return iterator(this, start_ + round_away_from_zero_to_multiple(stop_-start_, step_));
     }
 
   private:
+    static bool wrong_direction(T start, T stop, T step) {
+      if (start < stop && step < 0) return true;
+      if (start > stop && step > 0) return true;
+      return false;
+    }
+
     const T start_, stop_, step_;
 };
 

@@ -3,6 +3,9 @@ ACCEPTABLE_PRECISION_ERROR = 1e-3
 from enum import Enum, auto
 import re
 
+check_float_format = re.compile(r'^\d+\.\d+$')
+whitespace_chunk = re.compile(r'(\s+)')
+
 class LenientChecker:
     IGNORE_PROPERTY = {}
 
@@ -13,28 +16,21 @@ class LenientChecker:
             return f
         return dec
 
-    @staticmethod
-    def strip_list(l):
-        if not l:
-            return l
-        i = 0
-        j = len(l)
-        if l[0] == '':
-            i += 1
-        if l[-1] == '':
-            j -= 1
-        return l[i:j]
-
     def __init__(self, participant_answer, judge_answer):
         self.accept = False
         self.ignored_properties = set()
         self.warnings = dict()
 
-        p_tokens = self.strip_list(whitespace_chunk.split(participant_answer))
-        j_tokens = self.strip_list(whitespace_chunk.split(judge_answer))
+        p_tokens = whitespace_chunk.split(participant_answer)
+        j_tokens = whitespace_chunk.split(judge_answer)
 
         if len(p_tokens) != len(j_tokens):
-            return
+            self.ignored_properties.add('whitespace')
+            p_tokens = whitespace_chunk.split(participant_answer.strip())
+            j_tokens = whitespace_chunk.split(judge_answer.strip())
+
+        if len(p_tokens) != len(j_tokens):
+            return False;
 
         for p_token, j_token in zip(p_tokens, j_tokens):
             if p_token == j_token:
@@ -48,9 +44,6 @@ class LenientChecker:
                 return
 
         self.accept = True
-
-check_float_format = re.compile(r'^\d+\.\d+$')
-whitespace_chunk = re.compile(r'(\s)+')
 
 @LenientChecker.register_ignore('whitespace')
 def ignore_whitespace(p_token, j_token, warnings):
