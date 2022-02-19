@@ -10,7 +10,8 @@ def style_block(s, t, op, i1, i2, j1, j2):
     if op == 'replace':
         return '\n'.join(a+b for a, b, in itertools.zip_longest(
             paint(s[i1:i2], 'red').split('\n'),
-            paint(t[j1:j2], 'green').split('\n')
+            paint(t[j1:j2], 'green').split('\n'),
+            fillvalue=''
         ))
     if op == 'delete':
         return paint(s[i1:i2], 'red')
