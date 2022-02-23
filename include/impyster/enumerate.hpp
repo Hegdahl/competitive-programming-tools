@@ -15,4 +15,12 @@ auto enumerate(T &&iterable) {
   );
 }
 
+template<class T>
+auto enumerate_after(T &&iterable) {
+  return zip(
+    std::forward<T>(iterable),
+    range(std::numeric_limits<long long>::max()/2)
+  );
+}
+
 } // namespace impyster

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <istream>
 #include <ostream>
 #include <type_traits>
@@ -15,9 +16,20 @@ template<class T>
 using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
 template<class T>
-struct is_already_inputable : std::false_type {};
+struct unref_tuple {
+  using type = T;
+};
+template<class...Ts>
+struct unref_tuple<std::tuple<Ts...>> {
+  using type = std::tuple<typename unref_tuple<remove_cvref_t<Ts>>::type...>;
+};
+template<class T>
+using unref_tuple_t = typename unref_tuple<T>::type;
+
+template<class T>
+struct is_already_inputable : public std::false_type {};
 template<>
-struct is_already_inputable<std::string> : std::true_type {};
+struct is_already_inputable<std::string> : public std::true_type {};
 template<class T>
 constexpr bool is_already_inputable_v = is_already_inputable<T>::value;
 
@@ -97,15 +109,37 @@ std::ostream &operator<<(std::ostream &os, const std::tuple<Ts...> &t) {
   return os;
 }
 
+template<class T, class U>
+std::istream &operator>>(std::istream &is, std::pair<T, U> &p) {
+  return is >> std::tie(p.first, p.second);
+}
+
+struct unref_tuple {
+  template<class...Args>
+  auto operator()(const std::tuple<Args...> &t) const {
+    return std::tuple<std::remove_reference_t<Args>...>(t);
+  }
+};
+
 template<class T>
 auto make_vec(T &&iterable) {
-  using value_type = std::remove_reference_t<decltype(*std::declval<T>().begin())>;
-  return std::vector<value_type>(iterable.begin(), iterable.end());
+  using value_type = internal::remove_cvref_t<decltype(*std::declval<T>().begin())>;
+  return std::vector<internal::unref_tuple_t<value_type>>(iterable.begin(), iterable.end());
 }
 
 template<class...Args>
 auto tie_or_copy(Args&&...args) {
   return std::tuple<Args...>(std::forward<Args>(args)...);
+}
+
+template<class T>
+auto sort(T &c) {
+  return std::sort(c.begin(), c.end());
+}
+
+template<class T, class F>
+auto sort(T &c, F f) {
+  return std::sort(c.begin(), c.end(), std::forward<F>(f));
 }
 
 } // namespace impyster
