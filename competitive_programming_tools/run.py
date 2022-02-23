@@ -84,9 +84,9 @@ def get_executable(*, source_path, command, force_recompile):
             err = True, nl = False
         )
 
-        exit_code = os.system(f'{command} {source_path} -o {executable_path}')
+        exit_code = os.system(command.format(source_path = source_path, executable_path = executable_path))
         if exit_code:
-            click.echo()
+            click.echo(err = True)
             raise CompileError(exit_code)
 
         click.secho('done!', fg = 'green', err = True)
@@ -177,9 +177,9 @@ def interact(executable, interactor, argv, sample_in):
     interactor_dead = False
     executable_dead = False
 
-    click.secho('[SAMPLE]', fg = 'yellow', bold = True)
+    click.secho('[SAMPLE]', fg = 'yellow', bold = True, err = True)
     for line in sample_in:
-        click.echo(line[:-1])
+        click.echo(line[:-1], err = True)
         interactor_in.put(line)
 
     def done():
@@ -206,19 +206,19 @@ def interact(executable, interactor, argv, sample_in):
 
         return True
 
-    click.secho('[INTERACTION]', fg = 'yellow', bold = True)
+    click.secho('[INTERACTION]', fg = 'yellow', bold = True, err = True)
     while not done():
         lines = read_ready_lines(interactor_out)
         if lines:
-            click.secho('[INTERACTOR] ', bold = True, fg = 'magenta', nl = False)
-            click.secho('| ' + '             | '.join(lines), fg = 'yellow')
+            click.secho('[INTERACTOR] ', bold = True, fg = 'magenta', nl = False, err = True)
+            click.secho('| ' + '             | '.join(lines), fg = 'yellow', err = True)
             for line in lines:
                 executable_in.put(line)
 
         lines = read_ready_lines(executable_out)
         if lines:
-            click.secho('[EXECUTABLE] ', bold = True, fg = 'blue', nl = False)
-            click.echo('| ' + '             | '.join(lines))
+            click.secho('[EXECUTABLE] ', bold = True, fg = 'blue', nl = False, err = True)
+            click.echo('| ' + '             | '.join(lines), err = True)
             for line in lines:
                 interactor_in.put(line)
 
@@ -248,11 +248,11 @@ def execute(executable, argv, input_file):
             lines = err.decode().split('\n')
             if not lines[-1]:
                 lines.pop(-1)
-            click.secho('STDERR | ', bold = True, fg = 'magenta', nl = False)
-            click.secho(lines[0])
+            click.secho('STDERR | ', bold = True, fg = 'magenta', nl = False, err = True)
+            click.secho(lines[0], err = True)
             for line in lines[1:]:
-                click.secho('       | ', bold = True, fg = 'magenta', nl = False)
-                click.secho(line)
+                click.secho('       | ', bold = True, fg = 'magenta', nl = False, err = True)
+                click.secho(line, err = True)
         if out:
             output_chunks.append(out.decode())
             print(out.decode(), end='', flush = True)
@@ -300,7 +300,11 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
 
     GEN_COMMAND = {
         '.cpp': lambda: 'g++ -std=gnu++20 '
-        f'-I{INCLUDE} {CPP_WARNINGS} {CPP_DEBUG_LEVELS[debug_level]} {extra_flags}',
+        f'-I{INCLUDE} {CPP_WARNINGS} {CPP_DEBUG_LEVELS[debug_level]} {extra_flags} '
+        '{source_path} -o {executable_path}',
+
+        '.py': lambda: 'echo "#!/usr/bin/python" | cat - {source_path} '
+        '> {executable_path} && chmod +x {executable_path}'
     }
 
     try:
@@ -379,7 +383,7 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
 
                     if returncode:
                         results[-1][1] = click.style('RE', 'red')
-                        click.secho('[DIAGNOSTIC]', bold = True, fg = 'yellow')
+                        click.secho('[DIAGNOSTIC]', bold = True, fg = 'yellow', err = True)
                         with open(input_path) as file:
                             run_diagnostic(executable, argv, file)
                         click.echo(''.join((
