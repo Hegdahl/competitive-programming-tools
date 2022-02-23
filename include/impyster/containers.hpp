@@ -114,6 +114,11 @@ std::istream &operator>>(std::istream &is, std::pair<T, U> &p) {
   return is >> std::tie(p.first, p.second);
 }
 
+template<class T, class U>
+std::ostream &operator<<(std::ostream &os, std::pair<T, U> &p) {
+  return os << std::tie(p.first, p.second);
+}
+
 struct unref_tuple {
   template<class...Args>
   auto operator()(const std::tuple<Args...> &t) const {
