@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <vector>
 
 template<class V>
@@ -25,15 +26,19 @@ struct PullFreeSegTree {
   }
 
   template<class Push, class Pop, class Callback>
-  void dfs(Push &&push, Pop &&pop, Callback &&callback, int I = 1) {
-    push(values[I]);
+  void dfs(Push &&push, Pop &&pop, Callback &&callback, int I = 1, int l = -1, int r = -1) {
+    if (l == -1 && r == -1)
+      l = 0, r = offset;
+
+    push(values[I], l, r-1);
     if (I < offset) {
-      dfs(push, pop, callback, 2*I);
-      dfs(push, pop, callback, 2*I+1);
+      int mid = l + (r-l)/2;
+      dfs(push, pop, callback, 2*I, l, mid);
+      dfs(push, pop, callback, 2*I+1, mid, r);
     } else {
-      callback(I-offset);
+      callback(I-offset, l, r-1);
     }
-    pop(values[I]);
+    pop(values[I], l, r-1);
   }
 
 };
