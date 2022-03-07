@@ -52,3 +52,8 @@ struct DisjointSparseTable {
     return res;
   }
 };
+
+template<class S>
+DisjointSparseTable(const std::vector<S> &) -> DisjointSparseTable<S>;
+template<class S>
+DisjointSparseTable(std::vector<S> &&) -> DisjointSparseTable<S>;
