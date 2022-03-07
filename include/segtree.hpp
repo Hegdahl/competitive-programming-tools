@@ -43,8 +43,12 @@ struct SegTree {
 
       int k = i;
       auto it = begin(s);
-      while (it != end(s))
-        st.values[st.offset + k++] = *it++;
+      while (it != end(s)) {
+        if constexpr (std::is_same_v<const std::remove_reference_t<decltype(*it)>, const S>)
+          st.values[st.offset + k++] = *it++;
+        else
+          st.values[st.offset + k++] = {*it++};
+      }
       assert(k == j+1);
 
       int I = i+st.offset, J = j+st.offset;
