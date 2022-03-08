@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-template<class T, class Cmp = std::less<>, int W = 32, class W_t = uint32_t>
+template<class T, class Cmp = std::less<>, int W = 32, class W_t = uint32_t, class Idx = uint32_t>
 class RMQ {
  public:
 
@@ -18,13 +18,13 @@ class RMQ {
     sparse_table[0].resize(blocks.size());
 
     for (size_t i = 0; i < blocks.size(); ++i)
-      sparse_table[0][i] = blocks[i].init(*this, i * W, std::min(i * W + W, data.size())) + W * i;
+      sparse_table[0][i] = Idx(blocks[i].init(*this, i * W, std::min(i * W + W, data.size())) + W * i);
 
     size_t w = 1;
     for (int lvl = 0; lvl+1 < (int)sparse_table.size(); ++lvl, w *= 2) {
       sparse_table[lvl+1].resize(sparse_table[lvl].size() - w);
       for (size_t i = 0; i < sparse_table[lvl+1].size(); ++i)
-        sparse_table[lvl+1][i] = pick_index(sparse_table[lvl][i], sparse_table[lvl][i+w]);
+        sparse_table[lvl+1][i] = Idx(pick_index(sparse_table[lvl][i], sparse_table[lvl][i+w]));
     }
   }
 
@@ -99,7 +99,7 @@ class RMQ {
   std::vector<T> data;
   Cmp &&cmp_;
   std::vector<block> blocks;
-  std::vector<std::vector<size_t>> sparse_table;
+  std::vector<std::vector<Idx>> sparse_table;
 
   bool compare_indices(size_t i, size_t j) const {
     return cmp_(data[i], data[j]);

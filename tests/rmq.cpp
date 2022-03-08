@@ -1,14 +1,16 @@
+#pragma GCC optimize("Ofast,unroll-loops")
+
+#define FAST_CIN_BUFFER_SIZE (int)(5e5*(10+14)+100)
+#define FAST_COUT_BUFFER_SIZE (int)(5e5*10+100)
+#include <fastio.hpp>
 #include <rmq.hpp>
 #include <vector>
-#include <iostream>
 
 int main() {
-  std::cin.tie(0)->sync_with_stdio(0);
-
   int n, q;
   std::cin >> n >> q;
-  std::vector<int> a(n);
-  for (int &x : a)
+  std::vector<unsigned> a(n);
+  for (unsigned &x : a)
     std::cin >> x;
 
   RMQ rmq(a);
