@@ -7,8 +7,8 @@ int main() {
 
   int n, q;
   std::cin >> n >> q;
-  std::vector<long long> a(n);
-  for (long long &x : a)
+  std::vector<int> a(n);
+  for (int &x : a)
     std::cin >> x;
 
   RMQ rmq(a);

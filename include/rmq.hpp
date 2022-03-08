@@ -29,7 +29,7 @@ class RMQ {
   }
 
   template<class Container>
-  RMQ(Container &&src) : RMQ(std::forward<Container>(src), std::less<>{}) {}
+  RMQ(Container &&src) : RMQ(std::forward<Container>(src), Cmp{}) {}
 
   // [i, j]
   const T &operator()(size_t i, size_t j) const {
@@ -137,3 +137,7 @@ template<class S>
 RMQ(const std::vector<S> &) -> RMQ<S>;
 template<class S>
 RMQ(std::vector<S> &&) -> RMQ<S>;
+template<class S, class Cmp>
+RMQ(const std::vector<S> &, Cmp &&) -> RMQ<S, Cmp>;
+template<class S, class Cmp>
+RMQ(std::vector<S> &&, Cmp &&) -> RMQ<S, Cmp>;
