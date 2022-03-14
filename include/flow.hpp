@@ -7,7 +7,7 @@
 
 template<class T = long long>
 struct Flow {
-  static constexpr T INF = std::numeric_limits<T>::max();
+  static constexpr T INF = std::numeric_limits<T>::max() / 2;
 
   struct Edge {
     int to;
@@ -99,7 +99,7 @@ struct Flow {
   T dfs(int cur, T mn) {
     vis_list.push_back(cur);
 
-    if (cur == n-1) return INF;
+    if (cur == n-1) return mn;
 
     for (int I = (int)level_graph[cur].size()-1; I >= 0; --I) {
       Edge *e = level_graph[cur][I];
