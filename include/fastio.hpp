@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <cstddef>
 #ifndef FAST_CIN_BUFFER_SIZE
 #warning "FAST_CIN_BUFFER_SIZE is set to default of 1e8"
 #define FAST_CIN_BUFFER_SIZE (int)(1e8)
@@ -56,10 +57,10 @@ static struct out_t {
 } out;
 
 template<class T, class = void>
-struct reader {};
+struct reader : std::false_type {};
 
 template<class T, class = void>
-struct writer {};
+struct writer : std::false_type {};
 
 template<class T>
 struct reader<T, std::enable_if_t<std::is_integral_v<T>>> {
@@ -166,7 +167,8 @@ struct writer<std::string> {
 namespace std {
 
 struct {
-  template<class T>
+  template<class T, class = std::enable_if_t<
+    !std::is_base_of_v<std::false_type, fastio_detail::reader<T>>>>
   auto &operator>>(T &x) {
     fastio_detail::reader<T>{}.read(x);
     return *this;
@@ -174,7 +176,8 @@ struct {
 } cin;
 
 struct {
-  template<class T>
+  template<class T, class = std::enable_if_t<
+    !std::is_base_of_v<std::false_type, fastio_detail::writer<T>>>>
   auto &operator<<(const T &x) {
     fastio_detail::writer<T>{}.write(x);
     return *this;

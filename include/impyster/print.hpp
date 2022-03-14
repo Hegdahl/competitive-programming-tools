@@ -3,7 +3,6 @@
 #include <impyster/containers.hpp>
 
 #include <iostream>
-#include <ostream>
 #include <string>
 #include <tuple>
 
@@ -11,10 +10,10 @@ namespace impyster {
 
 namespace internal {
 
-template<class T>
+template<class OStream, class T>
 class print_impl {
   public:
-    print_impl(std::ostream &os, T args)
+    print_impl(OStream &os, T args)
       : os_(os), args_(std::move(args)), sep_(" "), end_("\n") {}
     ~print_impl() {
       print_tail<0>();
@@ -22,13 +21,15 @@ class print_impl {
     }
 
     template<class S>
-    void sep(S &&new_sep) {
+    print_impl &sep(S &&new_sep) {
       sep_ = std::forward<S>(new_sep);
+      return *this;
     }
 
     template<class S>
-    void end(S &&new_end) {
+    print_impl &end(S &&new_end) {
       end_ = std::forward<S>(new_end);
+      return *this;
     }
 
   private:
@@ -42,14 +43,14 @@ class print_impl {
       }
     }
 
-    std::ostream &os_;
+    OStream &os_;
     T args_;
     std::string sep_, end_;
 };
 
 struct print_impl_noop {
-  template<class S> void sep(S &&) {}
-  template<class S> void end(S &&) {}
+  template<class S> print_impl_noop &sep(S &&) { return *this; }
+  template<class S> print_impl_noop &end(S &&) { return *this; }
 };
 
 } // namespace internal

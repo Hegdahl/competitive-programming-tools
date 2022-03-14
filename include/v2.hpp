@@ -1,9 +1,7 @@
 #pragma once
 
 #include <cmath>
-#include <istream>
 #include <numeric>
-#include <ostream>
  
 template<class T = long long>
 struct V2 {
@@ -97,11 +95,13 @@ struct V2 {
     return a.x != b.x || a.y != b.y;
   }
  
-  friend std::ostream &operator<<(std::ostream &os, const V2 &v) {
+  template<class OStream>
+  friend OStream &operator<<(OStream &os, const V2 &v) {
     return os << '(' << v.x << ',' << v.y << ')';
   }
 
-  friend std::istream &operator>>(std::istream &is, V2 &v) {
+  template<class IStream>
+  friend IStream &operator>>(IStream &is, V2 &v) {
     return is >> v.x >> v.y;
   }
 

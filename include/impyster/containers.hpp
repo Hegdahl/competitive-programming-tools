@@ -1,8 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <istream>
-#include <ostream>
 #include <type_traits>
 #include <tuple>
 #include <utility>
@@ -47,24 +45,24 @@ struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin())>> : std::t
 template<class T>
 constexpr bool is_iterable_v = is_iterable<T>::value;
 
-template<int I, class...Ts>
-void read_tuple(std::istream &is, std::tuple<Ts...> &t) {
+template<int I, class IStream, class...Ts>
+void read_tuple(IStream &is, std::tuple<Ts...> &t) {
   if constexpr (I < sizeof...(Ts)) {
     is >> std::get<I>(t);
     read_tuple<I+1>(is, t);
   }
 }
 
-template<int I, class...Ts>
-void read_tuple(std::istream &is, const std::tuple<Ts...> &t) {
+template<int I, class IStream, class...Ts>
+void read_tuple(IStream &is, const std::tuple<Ts...> &t) {
   if constexpr (I < sizeof...(Ts)) {
     is >> std::get<I>(t);
     read_tuple<I+1>(is, t);
   }
 }
 
-template<int I, class...Ts>
-void print_tuple(std::ostream &os, const std::tuple<Ts...> &t) {
+template<int I, class OStream, class...Ts>
+void print_tuple(OStream &os, const std::tuple<Ts...> &t) {
   if constexpr (I < sizeof...(Ts)) {
     if constexpr (I)
       os << ' ';
@@ -75,47 +73,47 @@ void print_tuple(std::ostream &os, const std::tuple<Ts...> &t) {
 
 } // namespace internal
 
-template<class T, class = std::enable_if_t<
+template<class IStream, class T, class = std::enable_if_t<
 internal::is_iterable_v<T> && !internal::is_already_inputable_v<internal::remove_cvref_t<T>>>>
-std::istream &operator>>(std::istream &is, T &&container) {
+IStream &operator>>(IStream &is, T &&container) {
   for (auto &&v : container)
     is >> v;
   return is;
 }
 
-template<class T, class = std::enable_if_t<
+template<class OStream, class T, class = std::enable_if_t<
 internal::is_iterable_v<T> && !internal::is_already_outputable_v<internal::remove_cvref_t<T>>>>
-std::ostream &operator<<(std::ostream &os, T &&container) {
+OStream &operator<<(OStream &os, T &&container) {
   for (auto &&v : container)
     os << v << ' ';
   return os;
 }
 
-template<class...Ts>
-std::istream &operator>>(std::istream &is, std::tuple<Ts...> &t) {
+template<class IStream, class...Ts>
+IStream &operator>>(IStream &is, std::tuple<Ts...> &t) {
   internal::read_tuple<0>(is, t);
   return is;
 }
 
-template<class...Ts>
-std::istream &operator>>(std::istream &is, const std::tuple<Ts...> &t) {
+template<class IStream, class...Ts>
+IStream &operator>>(IStream &is, const std::tuple<Ts...> &t) {
   internal::read_tuple<0>(is, t);
   return is;
 }
 
-template<class...Ts>
-std::ostream &operator<<(std::ostream &os, const std::tuple<Ts...> &t) {
+template<class OStream, class...Ts>
+OStream &operator<<(OStream &os, const std::tuple<Ts...> &t) {
   internal::print_tuple<0>(os, t);
   return os;
 }
 
-template<class T, class U>
-std::istream &operator>>(std::istream &is, std::pair<T, U> &p) {
+template<class IStream, class T, class U>
+IStream &operator>>(IStream &is, std::pair<T, U> &p) {
   return is >> std::tie(p.first, p.second);
 }
 
-template<class T, class U>
-std::ostream &operator<<(std::ostream &os, std::pair<T, U> &p) {
+template<class OStream, class T, class U>
+OStream &operator<<(OStream &os, std::pair<T, U> &p) {
   return os << std::tie(p.first, p.second);
 }
 

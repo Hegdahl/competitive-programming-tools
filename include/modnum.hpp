@@ -1,8 +1,5 @@
 #pragma once
 
-#include <istream>
-#include <ostream>
-
 template<typename T>
 struct modnum {
   using Int = typename T::type;
@@ -42,8 +39,10 @@ struct modnum {
 
   modnum inv() const { return pow(T::MOD-2); }
 
-  friend std::istream &operator>>(std::istream &is, modnum &x) { Int v; is >> v; x = v; return is; }
-  friend std::ostream &operator<<(std::ostream &os, const modnum &x) { return os << x.val; }
+  template<class IStream>
+  friend IStream &operator>>(IStream &is, modnum &x) { Int v; is >> v; x = v; return is; }
+  template<class OStream>
+  friend OStream &operator<<(OStream &os, const modnum &x) { return os << x.val; }
 };
 
 template<long long M>
