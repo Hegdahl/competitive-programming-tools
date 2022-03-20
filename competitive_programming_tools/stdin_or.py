@@ -1,16 +1,27 @@
+from typing import Any, Optional
+
 import click
 
+
 class StdinOr(click.ParamType):
+    '''
+    If the input is '-' (without the quotes),
+    replace the input with the content of stdin.
+    '''
     name = 'auto-path'
 
-    def __init__(self, inner, root = ''):
+    def __init__(self, inner: Any, root: str = ''):
         self.inner = inner
 
-    def convert(self, value, param, ctx):
+    def convert(self,
+                value: Any,
+                param: Optional[click.Parameter],
+                ctx: Optional[click.Context]) -> Any:
         if value == '-':
             lines = []
             try:
-                while 1: lines.append(input())
+                while 1:
+                    lines.append(input())
             except EOFError:
                 pass
             value = '\n'.join(lines)+'\n'

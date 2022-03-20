@@ -1,158 +1,101 @@
 '''Executes a program from source.'''
 
-CPP_DEBUG_LEVELS = (
-    '-O2',
-
-    '-O1 -g3 -DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC',
-
-    '-O0 -g3 -DENABLE_DEBUG -fsanitize=address -fsanitize=undefined -fno-sanitize-recover '
-    '-fstack-protector -fsanitize-address-use-after-scope',
-
-    '-O0 -g3 -DENABLE_DEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC '
-    '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover '
-    '-fstack-protector -fsanitize-address-use-after-scope',
-)
-
-CPP_WARNINGS = (
-    '-Wall -Wextra -Wshadow -Wformat=2 -Wfloat-equal -Wconversion '
-    '-Wlogical-op -Wshift-overflow -Wduplicated-cond -Wcast-qual -Wcast-align '
-    '-Wno-variadic-macros '
-)
-
-IO_TIMEOUT = 1/120
-
-from hashlib import sha1
 import os
 import queue
 import subprocess
 import sys
 import threading
-import time
+from typing import (
+    AnyStr, cast, IO, Optional, List,
+    Sequence, TextIO, Tuple, TypeAlias
+)
 
 import click
 
-from . import DIRNAME, TMP_DIR, error, warn
+from .utils import error, warn, time_func
 from .auto_path import AutoPath
-from .lenient_checker import LenientChecker
 from .diff import diff_str
+from .get_executable import CompileError, get_executable
+from .languages import SUFF_TO_LANG
+from .lenient_checker import LenientChecker
 
-INCLUDE = os.path.join(DIRNAME, 'include')
+IO_TIMEOUT = 1/120
 
-def time_func(f):
-    t0 = time.perf_counter()
-    res = f()
-    tf = time.perf_counter()
-    return (tf-t0), res
 
-class CompileError(Exception):
-    def __init__(self, exit_code):
-        self.exit_code = exit_code
-
-def get_executable(*, source_path, command, force_recompile):
-    '''
-    Get the path to an executable corresponding to the source,
-    by compiling, or using previously compiled executable.
-    '''
-
-    source_id = sha1(source_path.encode()).hexdigest()[:16]
-    command_id = sha1(command.encode()).hexdigest()[:16]
-
-    source_copy_path = os.path.join(TMP_DIR, '-'.join((source_id, command_id, 'SRC')))
-    executable_path = os.path.join(TMP_DIR, '-'.join((source_id, command_id, 'EXE')))
-
-    old_content = ''
-
-    if os.path.exists(source_copy_path):
-        with open(source_copy_path, 'r') as file:
-            old_content = ''.join(file)
-
-    new_content = ''
-    with open(source_path, 'r') as file:
-        new_content = ''.join(file)
-
-    if new_content != old_content:
-        force_recompile = True
-        with open(source_copy_path, 'w') as file:
-            file.write(new_content)
-
-    if force_recompile and os.path.exists(executable_path):
-        os.remove(executable_path)
-
-    if not os.path.exists(executable_path):
-        click.echo(
-            f'Compiling {click.style(repr(source_path), fg = "yellow")} ... ',
-            err = True, nl = False
-        )
-
-        exit_code = os.system(command.format(source_path = source_path, executable_path = executable_path))
-        if exit_code:
-            click.echo(err = True)
-            raise CompileError(exit_code)
-
-        click.secho('done!', fg = 'green', err = True)
-
-    return executable_path
-
-def read_ready_lines(q):
+def read_ready_lines(q: queue.Queue) -> List[str]:
     lines = []
     try:
-        lines.append(q.get(timeout = IO_TIMEOUT))
-        while 1: lines.append(q.get(False))
+        lines.append(q.get(timeout=IO_TIMEOUT))
+        while 1:
+            lines.append(q.get(False))
     except queue.Empty:
         pass
     return lines
 
-def interactive_subprocess(command, argv = ()):
-    in_queue = queue.Queue()
-    out_queue = queue.Queue()
-    exit_code = [None]
+
+InteractiveSubprocess: TypeAlias = Tuple[
+    queue.Queue, queue.Queue,
+    threading.Thread, threading.Thread,
+    List[Optional[int]]
+]
+
+
+def interactive_subprocess(command: str,
+                           argv: Sequence[str] = (),
+                           ) -> InteractiveSubprocess:
+    in_queue: queue.Queue = queue.Queue()
+    out_queue: queue.Queue = queue.Queue()
+    exit_code: List[Optional[int]] = [None]
 
     process = subprocess.Popen(
         ' '.join((command, *argv)),
-        shell = True,
-        stdout = subprocess.PIPE,
-        stdin = subprocess.PIPE,
-        universal_newlines = True,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stdin=subprocess.PIPE,
+        universal_newlines=True,
     )
 
-    def write_loop(p, q):
+    def write_loop(p: subprocess.Popen, stdin: TextIO, q: queue.Queue) -> None:
         try:
             while 1:
                 exit_code[0] = p.poll()
-                if exit_code[0] is not None: break
+                if exit_code[0] is not None:
+                    break
 
                 lines = read_ready_lines(q)
                 if lines:
-                    p.stdin.write(''.join(lines))
-                    p.stdin.flush()
+                    stdin.write(''.join(lines))
+                    stdin.flush()
 
         except BrokenPipeError:
             error(f'Broken pipe when writing to {command!r}!')
             exit_code[0] = p.poll()
 
-    def read_loop(p, q):
+    def read_loop(p: subprocess.Popen, stdout: TextIO, q: queue.Queue) -> None:
         try:
             while 1:
                 exit_code[0] = p.poll()
-                if exit_code[0] is not None: break
-                line = p.stdout.readline()
+                if exit_code[0] is not None:
+                    break
+                line = stdout.readline()
                 if line.strip():
                     q.put(line)
+
         except BrokenPipeError:
             error(f'Broken pipe when reading from {command!r}!')
             exit_code[0] = p.poll()
 
-        for line in p.stdout:
+        for line in stdout:
             if line.strip():
                 q.put(line)
 
     writer = threading.Thread(
-        target = write_loop,
-        args = (process, in_queue),
+        target=write_loop,
+        args=(process, process.stdin, in_queue),
     )
     reader = threading.Thread(
-        target = read_loop,
-        args = (process, out_queue),
+        target=read_loop,
+        args=(process, process.stdout, out_queue),
     )
 
     writer.start()
@@ -160,7 +103,9 @@ def interactive_subprocess(command, argv = ()):
 
     return in_queue, out_queue, writer, reader, exit_code
 
-def interact(executable, interactor, argv, sample_in):
+
+def interact(executable: str, interactor: str,
+             argv: Sequence[str], sample_in: Sequence[str]) -> Tuple[int, int]:
     '''Run the executable together with an interactor.'''
     (
         interactor_in, interactor_out,
@@ -177,12 +122,12 @@ def interact(executable, interactor, argv, sample_in):
     interactor_dead = False
     executable_dead = False
 
-    click.secho('[SAMPLE]', fg = 'yellow', bold = True, err = True)
+    click.secho('[SAMPLE]', fg='yellow', bold=True, err=True)
     for line in sample_in:
-        click.echo(line[:-1], err = True)
+        click.echo(line[:-1], err=True)
         interactor_in.put(line)
 
-    def done():
+    def done() -> bool:
         nonlocal interactor_dead, executable_dead
 
         if interactor_exit_code[0] is not None and not interactor_dead:
@@ -206,19 +151,22 @@ def interact(executable, interactor, argv, sample_in):
 
         return True
 
-    click.secho('[INTERACTION]', fg = 'yellow', bold = True, err = True)
+    click.secho('[INTERACTION]', fg='yellow', bold=True, err=True)
     while not done():
         lines = read_ready_lines(interactor_out)
         if lines:
-            click.secho('[INTERACTOR] ', bold = True, fg = 'magenta', nl = False, err = True)
-            click.secho('| ' + '             | '.join(lines), fg = 'yellow', err = True)
+            click.secho('[INTERACTOR] ',
+                        bold=True, fg='magenta', nl=False, err=True)
+            click.secho('| ' + '             | '.join(lines),
+                        fg='yellow', err=True)
             for line in lines:
                 executable_in.put(line)
 
         lines = read_ready_lines(executable_out)
         if lines:
-            click.secho('[EXECUTABLE] ', bold = True, fg = 'blue', nl = False, err = True)
-            click.echo('| ' + '             | '.join(lines), err = True)
+            click.secho('[EXECUTABLE] ',
+                        bold=True, fg='blue', nl=False, err=True)
+            click.echo('| ' + '             | '.join(lines), err=True)
             for line in lines:
                 interactor_in.put(line)
 
@@ -230,87 +178,120 @@ def interact(executable, interactor, argv, sample_in):
     assert interactor_out.empty()
     assert executable_out.empty()
 
-    return (interactor_exit_code[0], executable_exit_code[0])
+    i_exit = interactor_exit_code[0]
+    e_exit = executable_exit_code[0]
+    assert i_exit is not None
+    assert e_exit is not None
+    return i_exit, e_exit
 
-def execute(executable, argv, input_file):
+
+def read_available(file: Optional[IO[bytes]]) -> bytes:
+    if file is None:
+        return b''
+    lines = [file.readline()]
+    while lines[-1]:
+        lines.append(file.readline())
+    return b''.join(lines)
+
+
+def execute(executable: str,
+            argv: Sequence[str],
+            input_file: TextIO) -> Tuple[int, str]:
     output_chunks = []
 
     proc = subprocess.Popen(
         [executable, *argv],
-        stdin = input_file,
-        stdout = subprocess.PIPE,
-        stderr = subprocess.PIPE,
+        stdin=input_file,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
 
     while proc.poll() is None:
-        out, err = proc.communicate()
+        out = read_available(proc.stdout)
+        err = read_available(proc.stderr)
+
         if err:
             lines = err.decode().split('\n')
             if not lines[-1]:
                 lines.pop(-1)
-            click.secho('STDERR | ', bold = True, fg = 'magenta', nl = False, err = True)
-            click.secho(lines[0], err = True)
+            click.secho('STDERR | ',
+                        bold=True, fg='magenta', nl=False, err=True)
+            click.secho(lines[0], err=True)
             for line in lines[1:]:
-                click.secho('       | ', bold = True, fg = 'magenta', nl = False, err = True)
-                click.secho(line, err = True)
+                click.secho('       | ',
+                            bold=True, fg='magenta', nl=False, err=True)
+                click.secho(line, err=True)
         if out:
             output_chunks.append(out.decode())
-            print(out.decode(), end='', flush = True)
+            print(out.decode(), end='', flush=True)
 
     return proc.returncode, '.'.join(output_chunks)
 
-def run_diagnostic(executable, argv, input_file):
+
+def run_diagnostic(executable: str,
+                   argv: Sequence[str],
+                   input_file: IO[AnyStr]) -> None:
     proc = subprocess.Popen(
-        ' '.join(('gdb -batch -ex "run" -ex "bt"', executable, *argv)),
-        shell = True,
-        stdin = input_file
+        ' '.join((
+            'gdb -batch -ex "run" -ex "bt"',
+            executable, *argv
+        )),
+        shell=True,
+        stdin=input_file
     )
     proc.wait()
 
-@click.argument('source', type = AutoPath(['cpp']))
-@click.argument('argv', nargs = -1)
-@click.option('-d', '--debug-level', type = click.IntRange(0, 3), default = 1,
-              help = (
+
+@click.argument('source', type=AutoPath())
+@click.argument('argv', nargs=-1)
+@click.option('-d', '--debug-level', type=click.IntRange(0, 3), default=1,
+              help=(
                   '\b\n'
                   'How paranoid should the debugging be?\n'
                   ' 0: As close to the average contest\n'
-                  '    environment as possible\n'
+                  '    environment as possible.\n'
                   ' 1: Default balance between compilation\n'
-                  '    speed and information\n'
-                  ' 2: Enables sanitizers\n'
-                  ' 3: EVERYTHING - last hope (before valgrind ig)\n\b\n'
+                  '    speed and information.\n'
+                  '>1: Higher levels may exist\n'
+                  '    depending on language.\n\b\n'
               ))
-@click.option('-fr', '--force-recompile', is_flag = True,
-              help = 'If this flag is set, the program will be recompiled even if unneccesary.')
-@click.option('-e', '--extra-flags', default = '')
-@click.option('-T', '--testset', type = str)
-@click.option('-i', '--interactor', type = str)
+@click.option('-fr', '--force-recompile', is_flag=True,
+              help='If this flag is set, the program will'
+                   'be recompiled even if unneccesary.')
+@click.option('-e', '--extra-flags', default='')
+@click.option('-T', '--testset', type=str)
+@click.option('-i', '--interactor',
+              type=click.Path(exists=True, dir_okay=False))
 @click.pass_context
-def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, interactor):
+def run(ctx: click.Context,
+        source: str,
+        argv: List[str],
+        debug_level: int,
+        force_recompile: bool,
+        extra_flags: str,
+        testset: Optional[str],
+        interactor: Optional[str]) -> None:
     '''Executes a program from source.'''
 
     if testset is None:
         test_dir = os.path.join(os.path.dirname(source), 'samples')
         if os.path.isdir(test_dir):
-            testset = os.path.join(test_dir, '.'.join(os.path.basename(source).split('.')[:-1]))
+            testset = os.path.join(
+                test_dir,
+                '.'.join(os.path.basename(source).split('.')[:-1])
+            )
         else:
             testset = '-'
 
-    lang = '.' + source.rsplit('.')[-1]
-
-    GEN_COMMAND = {
-        '.cpp': lambda: 'g++ -std=gnu++20 '
-        f'-I{INCLUDE} {CPP_WARNINGS} {CPP_DEBUG_LEVELS[debug_level]} {extra_flags} '
-        '{source_path} -o {executable_path}',
-
-        '.py': lambda: 'echo "#!/usr/bin/python" | cat - {source_path} '
-        '> {executable_path} && chmod +x {executable_path}'
-    }
+    suffix = source.rsplit('.')[-1]
 
     try:
-        command = GEN_COMMAND[lang]()
+        command = SUFF_TO_LANG[suffix].get_compile_command_gen(
+            debug_level=debug_level,
+            extra_flags=extra_flags,
+        )
     except KeyError:
-        ctx.fail(f'Unknown language {lang!r}')
+        ctx.fail(f'Unknown file suffix: {suffix!r}')
 
     try:
 
@@ -327,9 +308,11 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
                     interact(executable, interactor, argv, [*stdin])
 
             else:
-                time_used, (returncode, output) = time_func(lambda: execute(executable, argv, sys.stdin))
+                time_used, (returncode, output) = time_func(
+                    lambda: execute(executable, argv, sys.stdin))
 
-                click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
+                click.secho(f'{round(time_used * 1000)} ms',
+                            fg='blue', err=True)
 
                 if returncode:
                     error(f'crashed ({returncode})')
@@ -342,8 +325,10 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
             results = []
 
             for path in sorted(os.listdir(test_dir)):
-                if not path.startswith(test_prefix): continue
-                if not path.endswith('.in'): continue
+                if not path.startswith(test_prefix):
+                    continue
+                if not path.endswith('.in'):
+                    continue
 
                 test_name = path[:-3]
 
@@ -351,24 +336,32 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
                 output_path = os.path.join(test_dir, f'{test_name}.ans')
 
                 click.secho(
-                    f'Running test {click.style(repr(test_name), fg = "yellow")} ...',
-                    err = True
+                    'Running test ' +
+                    click.style(repr(test_name), fg="yellow") +
+                    ' ...',
+                    err=True
                 )
 
                 if interactor is not None:
                     with open(input_path, 'r') as file:
                         input_data = ''.join(file)
 
-                    time_used, (interactor_exit_code, executable_exit_code) = time_func(
+                    time_used, exit_codes = time_func(
                         lambda: interact(
                             executable,
-                            interactor,
+                            cast(str, interactor),
                             argv,
-                            [f'{line}\n' for line in input_data.split('\n')[:-1]]
+                            [f'{line}\n'
+                             for line in input_data.split('\n')[:-1]]
                         )
                     )
 
-                    fail = interactor_exit_code != 0 or executable_exit_code != 0
+                    interactor_exit_code, executable_exit_code = exit_codes
+
+                    fail = (
+                        interactor_exit_code != 0 or
+                        executable_exit_code != 0
+                    )
 
                     results.append([test_name, ['AC', 'RE'][fail], time_used])
 
@@ -377,64 +370,73 @@ def run(ctx, source, argv, debug_level, force_recompile, extra_flags, testset, i
                         time_used, (returncode, output) = time_func(
                             lambda: execute(executable, argv, file)
                         )
-                    results.append([test_name, click.style('??', fg = 'yellow'), time_used])
+                    results.append(
+                        [test_name, click.style('??', fg='yellow'), time_used]
+                    )
 
-                    click.secho(f'{round(time_used * 1000)} ms', fg = 'blue', err = True)
+                    click.secho(f'{round(time_used * 1000)} ms',
+                                fg='blue', err=True)
 
                     if returncode:
                         results[-1][1] = click.style('RE', 'red')
-                        click.secho('[DIAGNOSTIC]', bold = True, fg = 'yellow', err = True)
+                        click.secho('[DIAGNOSTIC]',
+                                    bold=True, fg='yellow', err=True)
                         with open(input_path) as file:
                             run_diagnostic(executable, argv, file)
                         click.echo(''.join((
-                            click.style('Finished ', fg = 'red'),
-                            click.style(repr(test_name), fg = 'yellow'),
-                            click.style(f' with RE ({returncode})', fg = 'red'),
-                        )), err = True)
+                            click.style('Finished ', fg='red'),
+                            click.style(repr(test_name), fg='yellow'),
+                            click.style(f' with RE ({returncode})', fg='red'),
+                        )), err=True)
 
                     elif os.path.exists(output_path):
-                        results[-1][1] = click.style('AC', fg = 'green')
+                        results[-1][1] = click.style('AC', fg='green')
 
                         with open(output_path, 'r') as file:
                             answer = ''.join(file)
-                        
+
                         checker_result = LenientChecker(output, answer)
 
                         if not checker_result.accept:
-                            click.secho('[DIFF]', bold = True, fg = 'yellow', err = True)
-                            click.echo(diff_str(answer, output), err = True, nl = False)
-                            results[-1][1] = click.style('WA', fg = 'red')
+                            click.secho('[DIFF]',
+                                        bold=True, fg='yellow', err=True)
+                            click.echo(diff_str(answer, output),
+                                       err=True, nl=False)
+                            results[-1][1] = click.style('WA', fg='red')
                             click.echo(''.join((
-                                click.style('Finished ', fg = 'red'),
-                                click.style(repr(test_name), fg = 'yellow'),
-                                click.style(' with WA', fg = 'red'),
-                            )), err = True)
+                                click.style('Finished ', fg='red'),
+                                click.style(repr(test_name), fg='yellow'),
+                                click.style(' with WA', fg='red'),
+                            )), err=True)
                         elif checker_result.ignored_properties:
-                            ignore_str = ', '.join(checker_result.ignored_properties)
+                            ignore_str = ', '.join(
+                                checker_result.ignored_properties
+                            )
                             click.echo(''.join((
-                                click.style('Finished ', fg = 'green'),
-                                click.style(repr(test_name), fg = 'yellow'),
-                                click.style(f' with AC (ignored: {ignore_str})', fg = 'green'),
-                            )), err = True)
+                                click.style('Finished ', fg='green'),
+                                click.style(repr(test_name), fg='yellow'),
+                                click.style(f' with AC (ignored {ignore_str})',
+                                            fg='green'),
+                            )), err=True)
 
                             if checker_result.warnings:
-                                results[-1][1] += click.style(' (with warnings)', fg = 'yellow')
+                                results[-1][1] += click.style(
+                                    ' (with warnings)', fg='yellow')
 
                             for name, err in checker_result.warnings.items():
                                 warn(f'{name}: {err}')
                         else:
                             click.echo(''.join((
-                                click.style('Finished ', fg = 'green'),
-                                click.style(repr(test_name), fg = 'yellow'),
-                                click.style(' with AC (exact)', fg = 'green'),
-                            )), err = True)
+                                click.style('Finished ', fg='green'),
+                                click.style(repr(test_name), fg='yellow'),
+                                click.style(' with AC (exact)', fg='green'),
+                            )), err=True)
 
-            click.echo('\nSummary:', err = True)
+            click.echo('\nSummary:', err=True)
             for name, verdict, time_used in results:
-                click.echo(f'  [{name}] ', err = True, nl = False)
-                click.secho(verdict, bold = True, err = True, nl = False)
-                click.echo(f' {round(1000*time_used)} ms', err = True)
-
-    except CompileError as exc:
+                click.echo(f'  [{name}] ', err=True, nl=False)
+                click.secho(verdict, bold=True, err=True, nl=False)
+                click.echo(f' {round(1000*time_used)} ms', err=True)
+    except CompileError:
         error('failed compiling.')
-        return exc.exit_code
+        ctx.fail('')

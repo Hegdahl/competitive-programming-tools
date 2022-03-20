@@ -2,28 +2,34 @@
 
 import os
 import click
+from typing import Optional
 
-from . import DIRNAME
+from .utils import DIRNAME
 from .auto_path import AutoPath
 from .stdin_or import StdinOr
 
 SNIPPETS = os.path.join(DIRNAME, 'snippets')
 
-def list_snippets(ctx, param, value):
+
+def list_snippets(ctx: click.Context,
+                  param: click.Parameter,
+                  value: bool) -> None:
     if not value or ctx.resilient_parsing:
         return
     for name in os.listdir(SNIPPETS):
         print(name.rsplit('.')[0])
     ctx.exit()
 
+
 @click.option('--list', is_flag=True, callback=list_snippets,
               expose_value=False, is_eager=True,
-              help = 'List all available snippets and exit.')
-@click.argument('name', type=StdinOr(AutoPath(['cpp'], root = SNIPPETS)))
-def get(name, silent = False):
+              help='List all available snippets and exit.')
+@click.argument('name', type=StdinOr(AutoPath(root=SNIPPETS)))
+def get(name: str, silent: bool = False) -> Optional[str]:
     '''Given a the name of a snippet, print the content it to stdout.'''
 
-    if not name.endswith('.cpp'):  name += '.cpp'
+    if not name.endswith('.cpp'):
+        name += '.cpp'
     path = os.path.join(SNIPPETS, name)
     if os.path.exists(path):
         with open(path) as file:
@@ -34,5 +40,7 @@ def get(name, silent = False):
                 return content
             else:
                 print(content)
+                return None
     else:
         click.secho(f'\nCould not find snippet {name!r}.', fg='red')
+        return None
