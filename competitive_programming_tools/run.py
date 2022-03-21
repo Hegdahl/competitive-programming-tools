@@ -12,12 +12,13 @@ from typing import (
 
 import click
 
-from .utils import error, warn, time_func
 from .auto_path import AutoPath
 from .diff import diff_str
+from .execute import execute
 from .get_executable import CompileError, get_executable
 from .languages import SUFF_TO_LANG
 from .lenient_checker import LenientChecker
+from .utils import error, warn, time_func
 
 IO_TIMEOUT = 1/120
 
@@ -185,49 +186,6 @@ def interact(executable: str, interactor: str,
     return i_exit, e_exit
 
 
-def read_available(file: Optional[IO[bytes]]) -> bytes:
-    if file is None:
-        return b''
-    lines = [file.readline()]
-    while lines[-1]:
-        lines.append(file.readline())
-    return b''.join(lines)
-
-
-def execute(executable: str,
-            argv: Sequence[str],
-            input_file: TextIO) -> Tuple[int, str]:
-    output_chunks = []
-
-    proc = subprocess.Popen(
-        [executable, *argv],
-        stdin=input_file,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    while proc.poll() is None:
-        out = read_available(proc.stdout)
-        err = read_available(proc.stderr)
-
-        if err:
-            lines = err.decode().split('\n')
-            if not lines[-1]:
-                lines.pop(-1)
-            click.secho('STDERR | ',
-                        bold=True, fg='magenta', nl=False, err=True)
-            click.secho(lines[0], err=True)
-            for line in lines[1:]:
-                click.secho('       | ',
-                            bold=True, fg='magenta', nl=False, err=True)
-                click.secho(line, err=True)
-        if out:
-            output_chunks.append(out.decode())
-            print(out.decode(), end='', flush=True)
-
-    return proc.returncode, '.'.join(output_chunks)
-
-
 def run_diagnostic(executable: str,
                    argv: Sequence[str],
                    input_file: IO[AnyStr]) -> None:
@@ -244,7 +202,7 @@ def run_diagnostic(executable: str,
 
 @click.argument('source', type=AutoPath())
 @click.argument('argv', nargs=-1)
-@click.option('-d', '--debug-level', type=click.IntRange(0, 3), default=1,
+@click.option('-d', '--debug-level', type=click.IntRange(0), default=1,
               help=(
                   '\b\n'
                   'How paranoid should the debugging be?\n'
@@ -262,6 +220,8 @@ def run_diagnostic(executable: str,
 @click.option('-T', '--testset', type=str)
 @click.option('-i', '--interactor',
               type=click.Path(exists=True, dir_okay=False))
+@click.option('--no-style-stderr', is_flag=True,
+              help='Modify stderr to make it clearer which part it is')
 @click.pass_context
 def run(ctx: click.Context,
         source: str,
@@ -270,7 +230,8 @@ def run(ctx: click.Context,
         force_recompile: bool,
         extra_flags: str,
         testset: Optional[str],
-        interactor: Optional[str]) -> None:
+        interactor: Optional[str],
+        no_style_stderr: bool) -> None:
     '''Executes a program from source.'''
 
     if testset is None:
@@ -309,7 +270,11 @@ def run(ctx: click.Context,
 
             else:
                 time_used, (returncode, output) = time_func(
-                    lambda: execute(executable, argv, sys.stdin))
+                    lambda: execute(
+                        executable, argv, sys.stdin,
+                        not no_style_stderr
+                    )
+                )
 
                 click.secho(f'{round(time_used * 1000)} ms',
                             fg='blue', err=True)
@@ -368,7 +333,10 @@ def run(ctx: click.Context,
                 else:
                     with open(input_path) as file:
                         time_used, (returncode, output) = time_func(
-                            lambda: execute(executable, argv, file)
+                            lambda: execute(
+                                executable, argv, file,
+                                not no_style_stderr
+                            )
                         )
                     results.append(
                         [test_name, click.style('??', fg='yellow'), time_used]
