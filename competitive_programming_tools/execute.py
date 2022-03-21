@@ -10,8 +10,8 @@ async def execute_impl(executable: str,
                        style_stderr: bool) -> Tuple[int, str]:
     output_chunks = []
 
-    proc = await asyncio.create_subprocess_exec(
-        executable, *argv,
+    proc = await asyncio.create_subprocess_shell(
+        ' '.join((executable, *argv)),
         stdin=input_file,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,

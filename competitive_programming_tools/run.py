@@ -14,7 +14,6 @@ from .auto_path import AutoPath
 from .diff import diff_str
 from .execute import execute, execute_interactive
 from .get_executable import CompileError, get_executable
-from .languages import SUFF_TO_LANG
 from .lenient_checker import LenientChecker
 from .utils import error, warn, time_func
 
@@ -196,9 +195,7 @@ def run_test(executable: str,
 @click.option('-i', '--interactor', type=str)
 @click.option('--no-style-stderr', is_flag=True,
               help='Modify stderr to make it clearer which part it is')
-@click.pass_context
-def run(ctx: click.Context,
-        source: str,
+def run(source: str,
         argv: List[str],
         debug_level: int,
         force_recompile: bool,
@@ -218,25 +215,16 @@ def run(ctx: click.Context,
         else:
             testset = '-'
 
-    suffix = source.rsplit('.')[-1]
-
-    try:
-        command = SUFF_TO_LANG[suffix].get_compile_command_gen(
-            debug_level=debug_level,
-            extra_flags=extra_flags,
-        )
-    except KeyError:
-        ctx.fail(f'Unknown file suffix: {suffix!r}')
-
     try:
         executable = get_executable(
             source_path=source,
-            command=command,
+            debug_level=debug_level,
+            extra_flags=extra_flags,
             force_recompile=force_recompile
         )
     except CompileError:
         error('failed compiling.')
-        ctx.fail('')
+        return
 
     if testset is None:
         assert interactor

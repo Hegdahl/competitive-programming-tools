@@ -4,12 +4,13 @@ import click
 
 from . import utils
 
-from .expand import expand
 from .diff import diff
+from .expand import expand
 from .get import get
 from .listen import listen
-from .run import run
 from .mk import mk, mke
+from .run import run
+from .stress import stress
 
 
 @click.group()
@@ -25,10 +26,11 @@ def flush() -> None:
     shutil.rmtree(utils.TMP_DIR)
 
 
-main.command()(expand)
 main.command()(diff)
+main.command()(expand)
 main.command()(get)
 main.command()(listen)
 main.command()(mk)
 main.command()(mke)
 main.command()(run)
+main.command()(stress)
