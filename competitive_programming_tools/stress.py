@@ -73,6 +73,7 @@ async def silent_run(command: str) -> Tuple[bytes, int]:
     proc = await asyncio.create_subprocess_shell(
         command,
         stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
     )
     stdout, stderr = await proc.communicate()
     return stdout, await proc.wait()
