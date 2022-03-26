@@ -24,13 +24,21 @@ def get_executable(*,
     suffix = source_path.rsplit('.', 1)[-1]
 
     try:
-        command = SUFF_TO_LANG[suffix].get_compile_command_gen(
-            debug_level=debug_level,
-            extra_flags=extra_flags,
-        )
+        lang = SUFF_TO_LANG[suffix]
     except KeyError:
         error(f'Unknown file suffix: {suffix!r}')
         raise CompileError(1)
+
+    if lang.directly_runnable:
+        return lang.get_compile_command_gen(
+            debug_level=debug_level,
+            extra_flags=extra_flags,
+        )(source_path=source_path, executable_path='?')
+
+    command = lang.get_compile_command_gen(
+        debug_level=debug_level,
+        extra_flags=extra_flags,
+    )
 
     command_id_str = command(source_path=source_path, executable_path='?')
 

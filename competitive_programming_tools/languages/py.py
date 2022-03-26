@@ -12,9 +12,7 @@ PY = Language(
         'pypy3',
         'python',
     ),
-    compile_format=(
-        'echo "#!/usr/bin/{debug_level}" '
-        '| cat - {source_path} > {executable_path} '
-        '&& chmod +x {executable_path}'
-    )
+    compile_format='{debug_level} {source_path}',
+    cf_id=70,
+    directly_runnable=True,
 )

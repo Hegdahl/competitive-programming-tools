@@ -12,11 +12,15 @@ class Language:
                  name: str,
                  suffixes: Sequence[str],
                  debug_levels: Sequence[str],
-                 compile_format: str):
+                 compile_format: str,
+                 cf_id: int,
+                 directly_runnable: bool = False):
         self.name = name
         self.suffixes = suffixes
         self.debug_levels = debug_levels
         self.compile_format = compile_format
+        self.cf_id = cf_id
+        self.directly_runnable = directly_runnable
 
     def get_compile_command_gen(self, *,
                                 debug_level: int,

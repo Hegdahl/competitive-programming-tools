@@ -1,4 +1,5 @@
 import asyncio
+import os
 import random
 import re
 import time
@@ -11,7 +12,7 @@ from .auto_path import AutoPath
 from .get_executable import get_executable
 from .utils import error
 
-RANGE_MATCHER = re.compile(r'^\[(\d+)(\.\.\.?)(\d+)\]$')
+range_matcher = re.compile(r'^\[(\d+)(\.\.\.?)(\d+)\]$')
 
 
 def get_range(s: str) -> Optional[Callable[[], str]]:
@@ -69,13 +70,14 @@ def search(f: Callable[[], Awaitable[None]],
         pbar.update(1000)
 
 
-async def silent_run(command: str) -> Tuple[bytes, int]:
+async def silent_run(input_data: Optional[str], solution: str) -> Tuple[bytes, int]:
     proc = await asyncio.create_subprocess_shell(
-        command,
+        solution,
+        stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
     )
-    stdout, stderr = await proc.communicate()
+    stdout, stderr = await proc.communicate(input_data)
     return stdout, await proc.wait()
 
 
@@ -136,8 +138,16 @@ def stress(ctx: click.Context,
         nonlocal total_tests
         total_tests += 1
         test_gen_command = ' '.join(arg.get() for arg in processed_args)
-        out, soln_exit_code = await silent_run(
-            f'{test_gen_command} | {soln_exe}')
+        input_data, genr_exit_code = await silent_run(None, test_gen_command)
+
+        if genr_exit_code:
+            raise CountertestFound(
+                'The command:',
+                click.style(test_gen_command, bold=True, fg='red'),
+                f'resulted in the generator crashing ({genr_exit_code=})',
+            )
+
+        out, soln_exit_code = await silent_run(input_data, soln_exe)
         if soln_exit_code:
             raise CountertestFound(
                 'The command:',
@@ -146,8 +156,7 @@ def stress(ctx: click.Context,
             )
 
         if check_exe is not None:
-            ans, check_exit_code = await silent_run(
-                f'{test_gen_command} | {check_exe}')
+            ans, check_exit_code = await silent_run(input_data, check_exe)
             if check_exit_code:
                 raise CountertestFound(
                     'The command:',

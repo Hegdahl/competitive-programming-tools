@@ -11,6 +11,7 @@ from .listen import listen
 from .mk import mk, mke
 from .run import run
 from .stress import stress
+from .submit import submit
 
 
 @click.group()
@@ -34,3 +35,4 @@ main.command()(mk)
 main.command()(mke)
 main.command()(run)
 main.command()(stress)
+main.command()(submit)

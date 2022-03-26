@@ -60,7 +60,7 @@ def expand_impl(path: str,
 @click.option('--tmp-file', is_flag=True,
               help=('Put the result in a temporary file and'
                     'print the name of the temp file instead.'))
-def expand(source: str, tmp_file: str) -> None:
+def expand(source: str, tmp_file: bool) -> None:
     '''
     Replace cpt includes with source code (for submission to online judges)
     '''

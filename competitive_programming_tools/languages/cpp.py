@@ -33,4 +33,5 @@ CPP = Language(
         '{debug_level} {extra_flags} '
         '{source_path} -o {executable_path}'
     ),
+    cf_id=73,
 )

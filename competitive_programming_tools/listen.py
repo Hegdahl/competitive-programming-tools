@@ -3,6 +3,7 @@ Listen for information about problems
 from the "Competitive Companion" extension.
 '''
 
+from datetime import datetime
 import http.server
 import json
 import os
@@ -49,7 +50,16 @@ class ProblemLoader:
         self.contest_directory = contest_directory
 
     def load_problem(self, data: Any) -> None:
-        name = format_name(data['name'])
+        header = (
+            '/**\n'
+            f' * author:  {os.environ["USER"]}\n'
+            f' * created: {datetime.now().strftime("%d.%m.%Y %H:%M")}\n'
+            f' * problem: {data["name"]}\n'
+            f' * url:     {data["url"]}\n'
+            ' */\n'
+        )
+
+        filename = format_name(data['name'])
 
         if data['tests']:
             sample_dir = os.path.join(self.contest_directory, 'samples')
@@ -57,33 +67,33 @@ class ProblemLoader:
                 os.mkdir(sample_dir)
 
             for i, sample in enumerate(data['tests']):
-                in_path = os.path.join(sample_dir, f'{name}_{i+1:02d}.in')
-                out_path = os.path.join(sample_dir, f'{name}_{i+1:02d}.ans')
+                in_path = os.path.join(sample_dir, f'{filename}_{i+1:02d}.in')
+                out_path = os.path.join(sample_dir, f'{filename}_{i+1:02d}.ans')
 
                 if os.path.exists(in_path):
-                    warn(f'{click.style(repr(in_path), fg="yellow")} '
-                         'already exists!')
+                    warn(click.style(repr(in_path), fg="yellow") +
+                         ' already exists!')
                 else:
                     with open(in_path, 'w') as file:
                         file.write(sample['input'])
 
                 if os.path.exists(out_path):
-                    warn(f'{click.style(repr(out_path), fg="yellow")} '
-                         'already exists!')
+                    warn(click.style(repr(out_path), fg="yellow") +
+                         ' already exists!')
                 else:
                     with open(out_path, 'w') as file:
                         file.write(sample['output'])
 
-        sol_path = os.path.join(self.contest_directory, f'{name}.cpp')
+        sol_path = os.path.join(self.contest_directory, f'{filename}.cpp')
 
         if os.path.exists(sol_path):
             warn(click.style(repr(sol_path), fg="yellow") +
                  ' already exists!')
         else:
             with open(sol_path, 'w') as file:
-                file.write(get_snippet('main', silent=True))
+                file.write(header + get_snippet('main', silent=True))
 
-        click.echo(click.style(f'[{name}]', fg='green') +
+        click.echo(click.style(f'[{filename}]', fg='green') +
                    f' {data["timeLimit"]} ms / {data["memoryLimit"]} MB',
                    err=True)
 
