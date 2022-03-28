@@ -10,8 +10,6 @@ from .languages import SUFF_TO_LANG
 from .online_judges import ONLINE_JUDGES
 from .utils import error
 
-SECRET_DIR = os.path.join(os.environ['HOME'], '.secret')
-
 url_matcher = re.compile(r' \* url: *(https://.+)')
 
 @click.argument('source', type=AutoPath())

@@ -28,7 +28,7 @@ CPP = Language(
         '-O0 -g3 -DENABLE_DEBUG ' + GLIBCXX_DEBUG + SANITIZERS,
     ),
     compile_format=(
-        'g++ -std=gnu++20 '
+        'g++ -std=gnu++2a '
         f'{WARNINGS} -I{INCLUDE} '
         '{debug_level} {extra_flags} '
         '{source_path} -o {executable_path}'
