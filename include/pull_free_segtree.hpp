@@ -9,7 +9,8 @@ struct PullFreeSegTree {
   const int offset;
   std::vector<V> values;
 
-  PullFreeSegTree(int n) : offset(2<<std::__lg((n-1)|1)), values(2*offset) {}
+  PullFreeSegTree(int n, V init) : offset(2<<std::__lg((n-1)|1)), values(2*offset, init) {}
+  PullFreeSegTree(int n) : PullFreeSegTree(n, V{}) {}
 
   template<class F>
   void operator()(int i, int j, F &&f) {

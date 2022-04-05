@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <string>
 #include <type_traits>
 #include <tuple>
 #include <utility>

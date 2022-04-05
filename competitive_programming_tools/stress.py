@@ -16,7 +16,7 @@ range_matcher = re.compile(r'^\[(\d+)(\.\.\.?)(\d+)\]$')
 
 
 def get_range(s: str) -> Optional[Callable[[], str]]:
-    match = RANGE_MATCHER.match(s)
+    match = range_matcher.match(s)
     if match is None:
         return None
 

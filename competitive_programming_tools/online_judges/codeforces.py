@@ -47,7 +47,10 @@ class Codeforces:
 
         try:
             if 'id' not in info:
-                info['id'] = int(soup.find(class_='view-source').text)
+                    info['id'] = int((
+                        soup.find(class_='view-source') or
+                        soup.find(class_='hiddenSource')
+                    ).text)
 
             row = soup.find('tr', {'data-submission-id': info['id']})
 
@@ -124,7 +127,8 @@ class Codeforces:
                     verdict_color = 'red'
                     if not submission_info['finished']:
                         verdict_color = 'yellow'
-                    elif verdict == 'Accepted':
+                    elif (''.join(chr for chr in verdict.lower() if chr.isalpha())
+                            in ('accepted', 'pretestspasssed', 'happynewyear')):
                         verdict_color = 'green'
                     styled_verdict = click.style(
                         verdict,

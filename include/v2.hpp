@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <numeric>
+#include <type_traits>
  
 template<class T = long long>
 struct V2 {
@@ -30,7 +31,9 @@ struct V2 {
   }
  
   constexpr V2 discrete_normalized() const {
-    if (x == 0 && y == 0) return {0, 0};
+    static_assert(!std::is_integral_v<T>);
+
+    if (*this == V2{0, 0}) return *this;
     T f = std::gcd(std::abs(x), std::abs(y));
     return {x/f, y/f};
   }
@@ -73,7 +76,7 @@ struct V2 {
   }
  
   constexpr friend V2 rotate_to_quadrant_0(const V2 &v) {
-    if (v.x == 0 && v.y == 0) return {0, 0};
+    if (v == V2{0, 0}) return v;
     if (v.quadrant() == 0) return v;
     return rotate_to_quadrant_0(rot90(v));
   }
@@ -88,11 +91,19 @@ struct V2 {
   }
  
   constexpr friend bool operator==(const V2 &a, const V2 &b) {
-    return a.x == b.x && a.y == b.y;
+    if constexpr (std::is_floating_point_v<T>) {
+      return std::abs(a.x-b.x) <= 1e-9 && std::abs(a.y-b.y) <= 1e-9;
+    } else {
+      return a.x == b.x && a.y == b.y;
+    }
   }
  
   constexpr friend bool operator!=(const V2 &a, const V2 &b) {
-    return a.x != b.x || a.y != b.y;
+    if constexpr (std::is_floating_point_v<T>) {
+      return std::abs(a.x-b.x) > 1e-9 || std::abs(a.y-b.y) > 1e-9;
+    } else {
+      return a.x != b.x || a.y != b.y;
+    }
   }
  
   template<class OStream>
@@ -105,4 +116,11 @@ struct V2 {
     return is >> v.x >> v.y;
   }
 
+  struct x_then_y {
+    bool operator()(const V2 &l, const V2 &r) const {
+      if (l.x != r.x)
+        return l.x < r.x;
+      return l.y < r.y;
+    }
+  };
 };

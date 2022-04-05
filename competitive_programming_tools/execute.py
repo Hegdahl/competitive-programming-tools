@@ -12,6 +12,7 @@ async def execute_impl(executable: str,
 
     proc = await asyncio.create_subprocess_shell(
         ' '.join((executable, *argv)),
+        limit=128*1024**2, # 128 MiB
         stdin=input_file,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -78,17 +79,17 @@ async def execute_interactive_impl(executable: str,
         while (line_bytes := (await src.readline())):
             line = line_bytes.decode()
             if last_begin_pre == begin_pre:
-                click.echo(continue_pre, nl=False, err=True)
+                click.echo(continue_pre, nl=False)
             else:
-                click.echo(begin_pre, nl=False, err=True)
+                click.echo(begin_pre, nl=False)
                 last_begin_pre = begin_pre
-            click.secho(line, fg=echo_color, nl=False, err=True)
+            click.secho(line, fg=echo_color, nl=False)
             dst.write(line_bytes)
 
     if sample_in:
-        click.secho('[SAMPLE]', fg='yellow', bold=True, err=True)
+        click.secho('[SAMPLE]', fg='yellow', bold=True)
     for line in sample_in:
-        click.echo(line, nl=False, err=True)
+        click.echo(line, nl=False)
         cast(asyncio.StreamWriter, inte_proc.stdin).write(line.encode())
 
     await asyncio.gather(
