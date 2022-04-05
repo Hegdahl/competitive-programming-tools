@@ -50,9 +50,11 @@ class ProblemLoader:
         self.contest_directory = contest_directory
 
     def load_problem(self, data: Any) -> None:
+        user_vairable = 'USERNAME' if os.name == 'nt' else 'USER'
+
         header = (
             '/**\n'
-            f' * author:  {os.environ["USER"]}\n'
+            f' * author:  {os.environ[user_vairable]}\n'
             f' * created: {datetime.now().strftime("%d.%m.%Y %H:%M")}\n'
             f' * problem: {data["name"]}\n'
             f' * url:     {data["url"]}\n'

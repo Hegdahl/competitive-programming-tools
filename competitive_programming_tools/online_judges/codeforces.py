@@ -19,7 +19,7 @@ class Codeforces:
         return url_matcher.match(url) is not None
 
     def __init__(self):
-        with open(os.path.join(os.environ['HOME'], '.secret', 'cpt@codeforces')) as secret_file:
+        with open(os.path.join(os.path.expanduser('~'), '.secret', 'cpt@codeforces')) as secret_file:
             self.username, self.password = (line.rstrip('\n') for line in secret_file.readlines())
 
     async def _post_form(self, session, url, form, **changes):

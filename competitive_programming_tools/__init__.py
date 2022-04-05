@@ -1,4 +1,7 @@
 '''Competitive programming tools'''
+import asyncio
+import os
+
 import shutil
 import click
 
@@ -13,6 +16,8 @@ from .run import run
 from .stress import stress
 from .submit import submit
 
+if os.name == 'nt':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 @click.group()
 @click.pass_context

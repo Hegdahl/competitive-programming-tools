@@ -47,11 +47,11 @@ def get_executable(*,
 
     source_copy_path = os.path.join(
         TMP_DIR,
-        '-'.join((source_id, command_id, 'SRC'))
+        f'{source_id}-{command_id}.src',
     )
     executable_path = os.path.join(
         TMP_DIR,
-        '-'.join((source_id, command_id, 'EXE'))
+        f'{source_id}-{command_id}.exe',
     )
 
     old_content = ''

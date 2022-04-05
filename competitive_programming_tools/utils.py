@@ -5,7 +5,7 @@ from typing import Any, Callable, Tuple
 import click
 
 DIRNAME = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
-TMP_DIR = os.path.join('/tmp', 'competitive_programming_tools')
+TMP_DIR = os.path.join(os.environ['TEMP'], 'competitive_programming_tools')
 if not os.path.exists(TMP_DIR):
     os.mkdir(TMP_DIR)
 
