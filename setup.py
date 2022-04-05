@@ -11,7 +11,7 @@ setup(
         'beautifulsoup4',
         'colorama',
         'click',
-        'html5lib'
+        'html5lib',
         'tqdm',
     ],
     entry_points={
