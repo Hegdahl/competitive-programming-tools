@@ -9,18 +9,17 @@ namespace internal {
 template<class F, class T>
 class map_impl {
 
- private:
   F func_;
   T iterable_;
 
  public:
   map_impl(F &&func, T &&iterable)
-    : func_(func), iterable_(std::forward<T>(iterable)) {}
+    : func_(std::forward<F>(func)), iterable_(std::forward<T>(iterable)) {}
 
   using inner_iterator = decltype(iterable_.begin());
 
   struct iterator : public inner_iterator {
-    F *func_ = nullptr;
+    std::remove_reference_t<F> *func_ = nullptr;
     auto operator*() {
       return (*func_)(inner_iterator::operator*());
     }
@@ -47,7 +46,7 @@ auto map(F &&func, Ts&&...iterables) {
   static_assert(sizeof...(Ts));
 
   if constexpr (sizeof...(Ts) == 1)
-    return internal::map_impl(std::forward<F>(func), std::forward<Ts>(iterables)...);
+    return internal::map_impl<F, Ts...>(std::forward<F>(func), std::forward<Ts>(iterables)...);
   else
     return internal::map_impl(
       [f=std::forward<F>(func)](auto t) { return std::apply(f, t); },
