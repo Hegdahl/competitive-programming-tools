@@ -128,7 +128,7 @@ class Codeforces:
                     if not submission_info['finished']:
                         verdict_color = 'yellow'
                     elif (''.join(chr for chr in verdict.lower() if chr.isalpha())
-                            in ('accepted', 'pretestspasssed', 'happynewyear')):
+                            in ('accepted', 'passedpretests', 'happynewyear')):
                         verdict_color = 'green'
                     styled_verdict = click.style(
                         verdict,
