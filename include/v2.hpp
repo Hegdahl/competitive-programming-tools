@@ -87,7 +87,10 @@ struct V2 {
     if (aq != bq) return aq < bq;
     a = rotate_to_quadrant_0(a);
     b = rotate_to_quadrant_0(b);
-    return a.y * b.x < b.y * a.x;
+    T c = cross(b, a);
+    if (c == 0)
+      return a.mag2() < b.mag2();
+    return c < 0;
   }
  
   constexpr friend bool operator==(const V2 &a, const V2 &b) {
