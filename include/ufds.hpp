@@ -2,7 +2,7 @@
 
 template<class Container = std::vector<int>, bool path_compression = true>
 struct UFDS {
-  std::vector<int> a;
+  Container a;
 
   UFDS(int n) : a(n, -1) {}
 
