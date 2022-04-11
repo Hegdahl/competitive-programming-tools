@@ -14,6 +14,9 @@ struct r_hash {
     return x ^ (x >> 31);
   }
 
+  template<class T>
+  uint64_t operator()(const T &x) const;
+
   uint64_t operator()(uint64_t x) const {
     static const uint64_t FIXED_RANDOM = rng();
     return splitmix64(x + FIXED_RANDOM);
