@@ -54,7 +54,7 @@ struct V2 {
     return x*x + y*y;
   }
 
-  constexpr T mag() const {
+  constexpr auto mag() const {
     return std::sqrt(mag2());
   }
  
