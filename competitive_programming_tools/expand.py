@@ -60,7 +60,7 @@ def expand_impl(path: str,
 @click.option('--tmp-file', is_flag=True,
               help=('Put the result in a temporary file and'
                     'print the name of the temp file instead.'))
-def expand(source: str, tmp_file: bool) -> None:
+def expand(source: str, tmp_file: bool, is_cli = True) -> None:
     '''
     Replace cpt includes with source code (for submission to online judges)
     '''
@@ -71,6 +71,8 @@ def expand(source: str, tmp_file: bool) -> None:
                                 f'EXPANDED-{os.path.basename(source)}')
         with open(out_path, 'w') as file:
             file.write(res)
-        print(out_path)
-    else:
+        res = out_path
+    if is_cli:
         print(res)
+    else:
+        return res

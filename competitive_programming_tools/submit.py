@@ -5,7 +5,7 @@ import re
 import click
 
 from .auto_path import AutoPath
-from .expand import expand_impl
+from .expand import expand
 from .languages import SUFF_TO_LANG
 from .online_judges import ONLINE_JUDGES
 from .utils import error
@@ -23,8 +23,9 @@ def submit(ctx: click.Context, source: str):
               click.style(repr(source), fg='yellow'))
         return
 
-    content = expand_impl(source, set())
-    url_match = url_matcher.search(content)
+    with open(source) as source_file:
+        raw_content = source_file.read()
+    url_match = url_matcher.search(raw_content)
     if url_match is None:
         error('Could not find the url of the problem.')
         click.secho('        Make sure there is a comment containing:', err=True)
@@ -35,8 +36,14 @@ def submit(ctx: click.Context, source: str):
 
     for OnlineJudge in ONLINE_JUDGES:
         if OnlineJudge.accepts_url(url):
+            if OnlineJudge.format == 'FILE':
+                data = expand(source=source, tmp_file=True, is_cli=False)
+            elif OnlineJudge.format == 'SOURCE':
+                data = expand(source=source, tmp_file=False, is_cli=False)
+            else:
+                raise ValueError(f'Unknown solution format: {OnlineJudge.FORMAT!r}')
             oj = OnlineJudge()
-            asyncio.run(oj.submit(url, content, lang))
+            asyncio.run(oj.submit(url, data, lang))
             return
 
     error(f'Could not figure out which online judege ' +

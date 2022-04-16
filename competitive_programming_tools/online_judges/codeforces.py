@@ -10,9 +10,10 @@ import click
 from ..utils import error, TMP_DIR
 
 LOGIN_URL = 'https://codeforces.com/enter'
-url_matcher = re.compile(r'^https://codeforces.com/.*/problem/.*')
+url_matcher = re.compile(r'^https://codeforces\.com/.*/problem/.*')
 
 class Codeforces:
+    format = 'SOURCE'
 
     @staticmethod
     def accepts_url(url: str):
