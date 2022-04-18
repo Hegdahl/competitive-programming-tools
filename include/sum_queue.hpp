@@ -1,3 +1,5 @@
+#pragma once
+
 #include <sum_stack.hpp>
 
 template<class T, class Op>

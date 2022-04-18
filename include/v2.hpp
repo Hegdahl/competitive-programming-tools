@@ -92,6 +92,10 @@ struct V2 {
       return a.mag2() < b.mag2();
     return c < 0;
   }
+
+  constexpr double angle() const {
+    return std::atan2(y, x);
+  }
  
   constexpr friend bool operator==(const V2 &a, const V2 &b) {
     if constexpr (std::is_floating_point_v<T>) {
@@ -111,12 +115,14 @@ struct V2 {
  
   template<class OStream>
   friend OStream &operator<<(OStream &os, const V2 &v) {
-    return os << '(' << v.x << ',' << v.y << ')';
+    os << '(' << v.x << ',' << v.y << ')';
+    return os;
   }
 
   template<class IStream>
   friend IStream &operator>>(IStream &is, V2 &v) {
-    return is >> v.x >> v.y;
+    is >> v.x >> v.y;
+    return is;
   }
 
   struct x_then_y {

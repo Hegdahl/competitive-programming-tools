@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 
 template<class Container = std::vector<int>, bool path_compression = true>
