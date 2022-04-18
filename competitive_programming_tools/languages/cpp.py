@@ -9,8 +9,6 @@ WARNINGS = (
     '-Wno-variadic-macros '
 )
 
-INCLUDE = os.path.join(DIRNAME, 'include')
-
 SANITIZERS = (
     '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover '
     '-fstack-protector -fsanitize-address-use-after-scope '
@@ -28,8 +26,7 @@ CPP = Language(
         '-O0 -g3 -DENABLE_DEBUG ' + GLIBCXX_DEBUG + SANITIZERS,
     ),
     compile_format=(
-        'g++ -std=gnu++2a '
-        f'{WARNINGS} -I{INCLUDE} '
+        f'g++ -std=gnu++2a {WARNINGS} '
         '{debug_level} {extra_flags} '
         '{source_path} -o {executable_path}'
     ),

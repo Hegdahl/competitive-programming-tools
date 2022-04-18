@@ -5,27 +5,25 @@ from typing import Optional, Set, Tuple
 import click
 
 from .utils import TMP_DIR
-from .languages.cpp import INCLUDE
 from .auto_path import AutoPath
 from .stdin_or import StdinOr
 
 include_matcher = re.compile(r'^#include\s*(<|")(.*)(>|")$')
-include_guard = re.compile(r'^#.*ATCODER_[A-Z_]*_HPP')
 
 
 def get_inner_path(line: str) -> Tuple[Optional[str], Optional[str]]:
     match = include_matcher.match(line)
     if not match:
         return None, None
-    path = os.path.join(INCLUDE, match.group(2))
-    if not os.path.isfile(path):
-        return None, None
-    return path, match.group(2)
+
+    for include_dir in os.environ['CPT_EXPAND_PATH'].split(':'):
+        path = os.path.join(include_dir, match.group(2))
+        if os.path.isfile(path):
+            return path, match.group(2)
+    return None, None
 
 
 def should_skip(line: str, is_source: bool) -> bool:
-    if include_guard.match(line):
-        return True
     line = line.strip()
     if line == "#pragma once":
         return True
@@ -38,7 +36,7 @@ def expand_impl(path: str,
                 already_included: Set[str],
                 is_source: bool = True) -> str:
     res = []
-    with open(path) as file:
+    with open(path, encoding='utf-8') as file:
         for line in file:
             if should_skip(line, is_source):
                 continue
@@ -63,13 +61,13 @@ def expand_impl(path: str,
 def expand(source: str, tmp_file: bool, is_cli = True) -> None:
     '''
     Replace cpt includes with source code (for submission to online judges)
+    Specifically for C++.
     '''
     res = expand_impl(source, set())
 
     if tmp_file:
-        out_path = os.path.join(TMP_DIR,
-                                f'EXPANDED-{os.path.basename(source)}')
-        with open(out_path, 'w') as file:
+        out_path = os.path.join(TMP_DIR, os.path.basename(source))
+        with open(out_path, 'w', encoding='utf-8') as file:
             file.write(res)
         res = out_path
     if is_cli:
