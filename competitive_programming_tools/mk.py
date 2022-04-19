@@ -1,3 +1,7 @@
+'''
+Provides functions for creating files
+with boilerplate for solutions.
+'''
 import os
 import click
 
@@ -8,13 +12,16 @@ NO_EXIST = click.Path(file_okay=False, dir_okay=False)
 
 @click.argument('path', type=NO_EXIST)
 @click.pass_context
-def mk(ctx: click.Context, path: str) -> str:
+# pylint: disable=invalid-name
+def mk(path: str, ctx: click.Context = None) -> str:
     '''Create a file containing snippets/main'''
     if not path.endswith('.cpp'):
         return mk(NO_EXIST.convert(f'{path}.cpp', None, ctx))
 
-    with open(path, 'w') as file:
-        file.write(get_snippet('main', silent=True))
+    with open(path, 'w', encoding='utf-8') as file:
+        main_src = get_snippet('main', silent=True)
+        assert main_src is not None
+        file.write(main_src)
 
     return path
 
@@ -22,5 +29,5 @@ def mk(ctx: click.Context, path: str) -> str:
 @click.argument('path', type=NO_EXIST)
 def mke(path: str) -> None:
     '''Create a file containing snippets/main and open it in $EDITOR'''
-    path = mk(path)
+    path = mk(path=path)
     os.system(f'$EDITOR {path}')

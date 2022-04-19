@@ -8,7 +8,7 @@ import http.server
 import json
 import os
 import threading
-from typing import Any
+from typing import Any, Callable
 
 import click
 
@@ -16,40 +16,56 @@ from .utils import warn
 from .get import get as get_snippet
 
 
-def format_name(s: str) -> str:
+def format_name(title: str) -> str:
+    '''
+    Changes a problem title
+    into a suitable filename.
+    '''
 
     # Codeforces style titles
-    cf_parts = s.split('. ', 1)
+    cf_parts = title.split('. ', 1)
     if (len(cf_parts) > 1 and
             1 <= len(cf_parts[0]) <= 3 and
             cf_parts[0][0].isalnum()):
         return cf_parts[0].upper()
 
     # AtCoder style titles
-    ac_parts = s.split(' - ')
+    ac_parts = title.split(' - ')
     if (len(ac_parts) > 1 and
             1 <= len(ac_parts[0]) <= 3 and
             ac_parts[0][0].isalnum()):
         return ac_parts[0]
 
     # Kattis style titles
-    kattis_parts = s.split(' - ')
+    kattis_parts = title.split(' - ')
     if (len(kattis_parts) > 1 and
             kattis_parts[0].startswith('Problem ')):
         return kattis_parts[0][len('Problem '):]
 
     # Everything else
     return ''.join(
-        c for c in s.strip().lower().replace(' ', '_')
+        c for c in title.strip().lower().replace(' ', '_')
         if c == '-' or c == '_' or c.isalnum()
     )
 
 
 class ProblemLoader:
+    '''
+    Class for saving the information
+    given by Competitive Companion
+    to the file system.
+    '''
+
     def __init__(self, contest_directory: str):
         self.contest_directory = contest_directory
 
-    def load_problem(self, data: Any) -> None:
+    def __call__(self, data: Any) -> None:
+        '''
+        Given information about a problem,
+        create a file containing boilerplate
+        for a solution file, and save sample
+        test input and output.
+        '''
         user_vairable = 'USERNAME' if os.name == 'nt' else 'USER'
 
         header = (
@@ -69,21 +85,27 @@ class ProblemLoader:
                 os.mkdir(sample_dir)
 
             for i, sample in enumerate(data['tests']):
-                in_path = os.path.join(sample_dir, f'{filename}_{i+1:02d}.in')
-                out_path = os.path.join(sample_dir, f'{filename}_{i+1:02d}.ans')
+                in_path = os.path.join(
+                    sample_dir,
+                    f'{filename}_{i+1:02d}.in'
+                )
+                out_path = os.path.join(
+                    sample_dir,
+                    f'{filename}_{i+1:02d}.ans'
+                )
 
                 if os.path.exists(in_path):
                     warn(click.style(repr(in_path), fg="yellow") +
                          ' already exists!')
                 else:
-                    with open(in_path, 'w') as file:
+                    with open(in_path, 'w', encoding='utf-8') as file:
                         file.write(sample['input'])
 
                 if os.path.exists(out_path):
                     warn(click.style(repr(out_path), fg="yellow") +
                          ' already exists!')
                 else:
-                    with open(out_path, 'w') as file:
+                    with open(out_path, 'w', encoding='utf-8') as file:
                         file.write(sample['output'])
 
         sol_path = os.path.join(self.contest_directory, f'{filename}.cpp')
@@ -92,22 +114,38 @@ class ProblemLoader:
             warn(click.style(repr(sol_path), fg="yellow") +
                  ' already exists!')
         else:
-            with open(sol_path, 'w') as file:
-                file.write(header + get_snippet('main', silent=True))
+            with open(sol_path, 'w', encoding='utf-8') as file:
+                main_src = get_snippet('main', silent=True)
+                assert main_src is not None
+                file.write(header + main_src)
 
         click.echo(click.style(f'[{filename}]', fg='green') +
                    f' {data["timeLimit"]} ms / {data["memoryLimit"]} MB',
                    err=True)
 
 
-def make_HTTPRequestHandler(problem_loader: ProblemLoader) -> Any:
+def make_http_request_handler(json_handler: Callable[[Any], None]) -> Any:
+    '''
+    Create a simple wrapper for sending
+    JSON from HTTP requests to handler.
+    '''
 
     class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
+        '''
+        Read JSON from HTTP requests
+        and pass it to `json_handler`.
+        '''
+
+        # pylint: disable=invalid-name
         def do_POST(self) -> None:
+            '''
+            Attempt to read JSON from a POST
+            request and pass it to `json_handler`.
+            '''
             content_len = int(self.headers.get('Content-Length'))
 
             data = json.loads(self.rfile.read(content_len))
-            problem_loader.load_problem(data)
+            json_handler(data)
 
             self.send_response(200)
             self.end_headers()
@@ -142,11 +180,11 @@ def listen(directory: str, port: int) -> None:
     problem_loader = ProblemLoader(directory)
     httpd = http.server.ThreadingHTTPServer(
         ('', port),
-        make_HTTPRequestHandler(problem_loader)
+        make_http_request_handler(problem_loader)
     )
 
-    t = threading.Thread(target=lambda: httpd.serve_forever(1/20))
-    t.start()
+    thread = threading.Thread(target=lambda: httpd.serve_forever(1/20))
+    thread.start()
 
     # click.pause messes up line-breaks while paused
     # click.pause('Press any key to exit...\n', err = True)
@@ -156,4 +194,4 @@ def listen(directory: str, port: int) -> None:
         os.system('read -n1 -r -p "Press any key to exit...\n" key')
 
     httpd.shutdown()
-    t.join()
+    thread.join()

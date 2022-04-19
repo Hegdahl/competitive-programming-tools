@@ -11,7 +11,6 @@ from typing import (
 import click
 
 from .auto_path import AutoPath
-from .diff import diff_str
 from .execute import execute, execute_interactive
 from .get_executable import CompileError, get_executable
 from .lenient_checker import LenientChecker
@@ -23,10 +22,18 @@ def run_interactive(executable: str,
                     argv: Sequence[str],
                     input_path: Union[str, int, None],
                     test_name: str) -> Tuple[str, float]:
+    '''
+    Run two processes communicating with each other
+    through stdin and stdout, and check that
+    the return code of both is 0, and print
+    information about the execution.
+
+    Returns a verdict string and the number of seconds spent.
+    '''
     if input_path is None:
         input_data = ''
     else:
-        with open(input_path, 'r') as file:
+        with open(input_path, 'r', encoding='utf-8') as file:
             input_data = ''.join(file)
 
     time_used, exit_codes = time_func(
@@ -67,6 +74,10 @@ def run_interactive(executable: str,
 def run_diagnostic(executable: str,
                    argv: Sequence[str],
                    input_file: IO[AnyStr]) -> None:
+    '''
+    Run the `executable` with `input_file`
+    fed to stdin inside the gnu debugger.
+    '''
     proc = subprocess.Popen(
         ' '.join((
             'gdb -batch -ex "run" -ex "bt"',
@@ -84,6 +95,22 @@ def run_test(executable: str,
              no_style_stderr: bool,
              test_dir: str,
              test_name: str) -> Tuple[str, float]:
+    '''
+    Run `executable` with an input
+    file and check if the output matches
+    the corresponding ouput file.
+
+    If an interactor is specified,
+    run them communicating with each other
+    instead of with the input file fed
+    to the executable.
+    In this case, feed the input file
+    to the interactor instead and
+    ignore any output file
+    (the interactor should check that the output is correct).
+
+    Returns a verdict string and the number of seconds used.
+    '''
     input_path = os.path.join(test_dir, f'{test_name}.in')
     output_path = os.path.join(test_dir, f'{test_name}.ans')
 
@@ -104,7 +131,7 @@ def run_test(executable: str,
         )
         return verdict_str, time_used
 
-    with open(input_path) as file:
+    with open(input_path, encoding='utf-8') as file:
         time_used, (returncode, output) = time_func(
             lambda: execute(
                 executable, argv, file,
@@ -120,7 +147,7 @@ def run_test(executable: str,
         verdict_str = click.style('RE', 'red')
         click.secho('[DIAGNOSTIC]',
                     bold=True, fg='yellow', err=True)
-        with open(input_path) as file:
+        with open(input_path, encoding='utf-8') as file:
             run_diagnostic(executable, argv, file)
         click.echo(''.join((
             click.style('Finished ', fg='red'),
@@ -131,7 +158,7 @@ def run_test(executable: str,
     elif os.path.exists(output_path):
         verdict_str = click.style('AC', fg='green')
 
-        with open(output_path, 'r') as file:
+        with open(output_path, 'r', encoding='utf-8') as file:
             answer = ''.join(file)
 
         checker_result = LenientChecker(output, answer)
@@ -139,8 +166,6 @@ def run_test(executable: str,
         if not checker_result.accept:
             click.secho('[DIFF]',
                         bold=True, fg='yellow', err=True)
-            click.echo(diff_str(answer, output),
-                       err=True, nl=False)
             verdict_str = click.style('WA', fg='red')
             click.echo(''.join((
                 click.style('Finished ', fg='red'),
@@ -236,7 +261,7 @@ def run(source: str,
             run_interactive(executable, interactor, argv, 0, '')
             return
 
-        time_used, (returncode, output) = time_func(
+        time_used, (returncode, _) = time_func(
             lambda: execute(
                 executable, argv, sys.stdin,
                 not no_style_stderr

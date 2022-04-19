@@ -1,8 +1,9 @@
 '''Given a the name of a snippet, print the content it to stdout.'''
 
 import os
-import click
 from typing import Optional
+
+import click
 
 from .utils import DIRNAME
 from .auto_path import AutoPath
@@ -12,8 +13,11 @@ SNIPPETS = os.path.join(DIRNAME, 'snippets')
 
 
 def list_snippets(ctx: click.Context,
-                  param: click.Parameter,
+                  _: click.Parameter,
                   value: bool) -> None:
+    '''
+    Print each filename in the snippet directory.
+    '''
     if not value or ctx.resilient_parsing:
         return
     for name in os.listdir(SNIPPETS):
@@ -32,7 +36,7 @@ def get(name: str, silent: bool = False) -> Optional[str]:
         name += '.cpp'
     path = os.path.join(SNIPPETS, name)
     if os.path.exists(path):
-        with open(path) as file:
+        with open(path, encoding='utf-8') as file:
             content = file.read()
             _, content = content.split('/*BEGIN_SNIPPET*/\n')
             content, _ = content.split('/*END_SNIPPET*/')

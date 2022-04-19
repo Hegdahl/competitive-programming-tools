@@ -1,3 +1,7 @@
+'''
+General utilities.
+'''
+
 import os
 import time
 from typing import Any, Callable, Tuple
@@ -24,10 +28,14 @@ def error(message: str) -> None:
     click.echo(f' {message}', err=True)
 
 
-def time_func(f: Callable[..., Any],
+def time_func(func: Callable[..., Any],
               *args: Any,
               **kwargs: Any) -> Tuple[float, Any]:
-    t0 = time.perf_counter()
-    res = f(*args, **kwargs)
-    tf = time.perf_counter()
-    return (tf-t0), res
+    '''
+    Call `func` and meassure how long it takes to execute.
+    Return (the time taken, the result of `func).
+    '''
+    start_time = time.perf_counter()
+    res = func(*args, **kwargs)
+    end_time = time.perf_counter()
+    return (end_time-start_time), res

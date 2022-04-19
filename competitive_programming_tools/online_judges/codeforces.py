@@ -1,27 +1,37 @@
+'''
+Provides :py:class:`Codeforces`.
+'''
+
 import asyncio
 import os
-import re
 
 import aiohttp
 from asyncspinner import Spinner
 from bs4 import BeautifulSoup
 import click
 
+from .online_judge import OnlineJudge
 from ..utils import error, TMP_DIR
 
-LOGIN_URL = 'https://codeforces.com/enter'
-url_matcher = re.compile(r'^https://codeforces\.com/.*/problem/.*')
 
-class Codeforces:
-    format = 'SOURCE'
+class Codeforces(OnlineJudge):
+    '''
+    Handles submitting solutions to https://codeforces.com
+    '''
 
-    @staticmethod
-    def accepts_url(url: str):
-        return url_matcher.match(url) is not None
+    FORMAT = 'SOURCE'
+    URL_PATTERN = r'^https://codeforces\.com/.*/problem/.*'
+
+    LOGIN_URL = 'https://codeforces.com/enter'
 
     def __init__(self):
-        with open(os.path.join(os.path.expanduser('~'), '.secret', 'cpt@codeforces')) as secret_file:
-            self.username, self.password = (line.rstrip('\n') for line in secret_file.readlines())
+        with open(os.path.join(os.path.expanduser('~'),
+                               '.secret', 'cpt@codeforces'),
+                  encoding='utf-8') as secret_file:
+            self.username, self.password = (
+                line.rstrip('\n')
+                for line in secret_file.readlines()
+            )
 
     async def _post_form(self, session, url, form, **changes):
         inputs = {}
@@ -36,6 +46,10 @@ class Codeforces:
             return response.status, await response.text()
 
     def find_submission_error(self, html_text):
+        '''
+        Look for what went wrong with a submission,
+        and return the message as a string if found.
+        '''
         soup = BeautifulSoup(html_text, features='html5lib')
         error_span = soup.find('span', class_='error')
         if error_span is not None:
@@ -48,10 +62,10 @@ class Codeforces:
 
         try:
             if 'id' not in info:
-                    info['id'] = int((
-                        soup.find(class_='view-source') or
-                        soup.find(class_='hiddenSource')
-                    ).text)
+                info['id'] = int((
+                    soup.find(class_='view-source') or
+                    soup.find(class_='hiddenSource')
+                ).text)
 
             row = soup.find('tr', {'data-submission-id': info['id']})
 
@@ -70,21 +84,28 @@ class Codeforces:
             info['memory'] = ' '.join(memory_cell.text.strip().split())
         except Exception:
             path = os.path.join(TMP_DIR, 'dump.html')
-            with open(path, 'w') as dump:
+            with open(path, 'w', encoding='utf-8') as dump:
                 dump.write(str(soup))
             error('Error during parsing of the html dumped here:')
             click.secho(path, fg='yellow')
             raise
 
     async def submit(self, url, solution, lang):
+        '''
+        Submit the `solution` Codeforces,
+        as a solution for the problem at the `url`.
+        '''
         async with aiohttp.ClientSession() as session:
             click.echo('Loggin in ... ', nl=False, err=True)
-            async with session.get(LOGIN_URL) as response:
+            async with session.get(Codeforces.LOGIN_URL) as response:
                 assert response.status == 200
-                soup = BeautifulSoup(await response.text(), features='html5lib')
+                soup = BeautifulSoup(
+                    await response.text(),
+                    features='html5lib'
+                )
             login_form = soup.find(id='enterForm')
             status, _ = await self._post_form(
-                session, LOGIN_URL, login_form,
+                session, Codeforces.LOGIN_URL, login_form,
                 handleOrEmail=self.username,
                 password=self.password,
             )
@@ -97,7 +118,10 @@ class Codeforces:
             click.echo('Submitting ... ', nl=False, err=True)
             async with session.get(url) as response:
                 assert response.status == 200
-                soup = BeautifulSoup(await response.text(), features='html5lib')
+                soup = BeautifulSoup(
+                    await response.text(),
+                    features='html5lib'
+                )
             submit_form = soup.find(class_='table-form').parent
             status, submission_response = await self._post_form(
                 session, url, submit_form,
@@ -109,7 +133,8 @@ class Codeforces:
                 error('Failed submitting')
                 return
 
-            if (submit_error := self.find_submission_error(submission_response)) is not None:
+            submit_error = self.find_submission_error(submission_response)
+            if submit_error is not None:
                 click.echo(err=True)
                 error(submit_error)
                 return
@@ -123,12 +148,17 @@ class Codeforces:
             }
             async with Spinner() as spinner:
                 while not submission_info['finished']:
-                    await self._update_submission_info(session, my_submissions_url, submission_info)
+                    await self._update_submission_info(
+                        session,
+                        my_submissions_url,
+                        submission_info,
+                    )
                     verdict = submission_info['verdict']
                     verdict_color = 'red'
                     if not submission_info['finished']:
                         verdict_color = 'yellow'
-                    elif (''.join(chr for chr in verdict.lower() if chr.isalpha())
+                    elif (''.join(chr for chr in verdict.lower()
+                                  if chr.isalpha())
                             in ('accepted', 'pretestspassed', 'happynewyear')):
                         verdict_color = 'green'
                     styled_verdict = click.style(

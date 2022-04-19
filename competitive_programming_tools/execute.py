@@ -1,3 +1,7 @@
+'''
+Provides functions for executing
+programs from source code and testing them.
+'''
 import asyncio
 from typing import cast, Optional, Sequence, TextIO, Tuple
 
@@ -8,11 +12,15 @@ async def execute_impl(executable: str,
                        argv: Sequence[str],
                        input_file: TextIO,
                        style_stderr: bool) -> Tuple[int, str]:
+    '''
+    Run an executable with the given argv and input file,
+    and return the exit code and standard output.
+    '''
     output_chunks = []
 
     proc = await asyncio.create_subprocess_shell(
         ' '.join((executable, *argv)),
-        limit=128*1024**2, # 128 MiB
+        limit=128*1024**2,  # 128 MiB
         stdin=input_file,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -53,6 +61,15 @@ async def execute_interactive_impl(executable: str,
                                    argv: Sequence[str],
                                    sample_in: Sequence[str]
                                    ) -> Tuple[int, int]:
+    '''
+    Run two executables communicating to each other
+    through stdin and stdout.
+
+    argv is given to `interactor`.
+
+    `sample_in` is given to `interactor`'s stdin
+    before the communication starts.
+    '''
 
     exec_proc = await asyncio.create_subprocess_shell(
         executable,
@@ -115,6 +132,10 @@ def execute(executable: str,
             argv: Sequence[str],
             input_file: TextIO,
             style_stderr: bool) -> Tuple[int, str]:
+    '''
+    Wrapper for :py:function:`execute_impl` to start it
+    in an async context.
+    '''
     return asyncio.run(execute_impl(
         executable, argv, input_file, style_stderr))
 
@@ -123,5 +144,9 @@ def execute_interactive(executable: str,
                         interactor: str,
                         argv: Sequence[str],
                         sample_in: Sequence[str]) -> Tuple[int, int]:
+    '''
+    Wrapper for :py:func:`execute_interactive_impl` to start it
+    in an async context.
+    '''
     return asyncio.run(execute_interactive_impl(
         executable, interactor, argv, sample_in))

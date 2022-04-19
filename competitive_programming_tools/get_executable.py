@@ -1,3 +1,6 @@
+'''
+Provides :py:func:`get_executable`.
+'''
 from hashlib import sha1
 import os
 
@@ -8,7 +11,11 @@ from .utils import TMP_DIR, error
 
 
 class CompileError(Exception):
+    '''
+    Raised when some external compiler fails.
+    '''
     def __init__(self, exit_code: int):
+        super().__init__(self, f'Compiler exited with code {exit_code}.')
         self.exit_code = exit_code
 
 
@@ -25,9 +32,9 @@ def get_executable(*,
 
     try:
         lang = SUFF_TO_LANG[suffix]
-    except KeyError:
+    except KeyError as exc:
         error(f'Unknown file suffix: {suffix!r}')
-        raise CompileError(1)
+        raise CompileError(1) from exc
 
     if lang.directly_runnable:
         return lang.get_compile_command_gen(
@@ -57,16 +64,16 @@ def get_executable(*,
     old_content = ''
 
     if os.path.exists(source_copy_path):
-        with open(source_copy_path, 'r') as file:
+        with open(source_copy_path, 'r', encoding='utf-8') as file:
             old_content = ''.join(file)
 
     new_content = ''
-    with open(source_path, 'r') as file:
+    with open(source_path, 'r', encoding='utf-8') as file:
         new_content = ''.join(file)
 
     if new_content != old_content:
         force_recompile = True
-        with open(source_copy_path, 'w') as file:
+        with open(source_copy_path, 'w', encoding='utf-8') as file:
             file.write(new_content)
 
     if force_recompile and os.path.exists(executable_path):

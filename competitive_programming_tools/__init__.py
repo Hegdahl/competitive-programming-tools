@@ -7,7 +7,6 @@ import click
 
 from . import utils
 
-from .diff import diff
 from .expand import expand
 from .get import get
 from .listen import listen
@@ -17,7 +16,9 @@ from .stress import stress
 from .submit import submit
 
 if os.name == 'nt':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore
+
 
 @click.group()
 @click.pass_context
@@ -32,7 +33,6 @@ def flush() -> None:
     shutil.rmtree(utils.TMP_DIR)
 
 
-main.command()(diff)
 main.command()(expand)
 main.command()(get)
 main.command()(listen)

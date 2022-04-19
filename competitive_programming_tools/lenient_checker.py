@@ -1,9 +1,12 @@
-from typing import cast, Any, Callable, Dict, List, TypeAlias, Union
+'''
+Provides :py:class:`LenientChecker`
+'''
+from typing import cast, Any, Callable, Dict, List, TypeAlias
 import re
 
 ACCEPTABLE_PRECISION_ERROR = 1e-3
 
-WarningSet: TypeAlias = Dict[str, Union[float]]
+WarningSet: TypeAlias = Dict[str, float]
 IgnoredPropertyChecker: TypeAlias = Callable[[str, str, WarningSet], bool]
 
 check_float_format = re.compile(r'^\d+\.\d+$')
@@ -11,13 +14,21 @@ whitespace_chunk = re.compile(r'(\s+)')
 
 
 class LenientChecker:
+    '''
+    Class for checkign whether two
+    output files approximately match.
+    '''
     IGNORE_PROPERTY: Dict[str, IgnoredPropertyChecker] = {}
 
     @classmethod
     def register_ignore(cls, name: str) -> Callable[[Any], Any]:
-        def dec(f: IgnoredPropertyChecker) -> IgnoredPropertyChecker:
-            cls.IGNORE_PROPERTY[name] = f
-            return f
+        '''
+        Add a function to the set of functions
+        to compare tokens ignoring some property.
+        '''
+        def dec(func: IgnoredPropertyChecker) -> IgnoredPropertyChecker:
+            cls.IGNORE_PROPERTY[name] = func
+            return func
         return dec
 
     def __init__(self, participant_answer: str, judge_answer: str):
@@ -55,17 +66,29 @@ class LenientChecker:
 @LenientChecker.register_ignore('whitespace')
 def ignore_whitespace(p_token: str,
                       j_token: str,
-                      warnings: WarningSet) -> bool:
+                      _: WarningSet) -> bool:
+    '''
+    Report tokens as equal if they are both whitespace.
+    '''
     return p_token.isspace() and j_token.isspace()
 
 
 @LenientChecker.register_ignore('case')
-def ignore_case(p_token: str, j_token: str, warnings: WarningSet) -> bool:
+def ignore_case(p_token: str, j_token: str, _: WarningSet) -> bool:
+    '''
+    Report tokens as equal if they are the
+    same after ignoring letter case.
+    '''
     return p_token.lower() == j_token.lower()
 
 
 @LenientChecker.register_ignore('precision')
 def ignore_precision(p_token: str, j_token: str, warnings: WarningSet) -> bool:
+    '''
+    Report tokens as equal if both look like floating point numbers,
+    and their absolute or relative error is less than
+    :py:const:`ACCEPTABLE_PRECISION_ERROR`
+    '''
     if check_float_format.match(p_token) is None:
         return False
     if check_float_format.match(p_token) is None:

@@ -1,3 +1,6 @@
+'''
+Provides :py:class:`AutoPath`.
+'''
 import os
 from typing import cast, Callable, Optional, Sequence, Union
 

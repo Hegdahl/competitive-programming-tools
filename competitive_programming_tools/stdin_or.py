@@ -1,3 +1,7 @@
+'''
+Provides :py:class:`StdinOr`.
+'''
+
 from typing import Any, Optional
 
 import click
@@ -10,7 +14,7 @@ class StdinOr(click.ParamType):
     '''
     name = 'auto-path'
 
-    def __init__(self, inner: Any, root: str = ''):
+    def __init__(self, inner: Any):
         self.inner = inner
 
     def convert(self,
