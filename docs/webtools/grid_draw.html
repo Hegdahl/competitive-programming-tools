@@ -4,8 +4,97 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grid Draw</title>
+    <style>
+
+:root {
+    --bg0: #2e3440;
+    --bg1: #3b4252;
+    --bg2: #434c5e;
+    --bg3: #4c566a;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg0) var(--bg2);
+}
+
+#grid {
+    background-color: var(--bg0);
+}
+
+#grid>div>div {
+    position: relative;
+    height: 2em;
+    width: 2em;
+    border: solid var(--bg1) 1px;
+    display: inline-block;
+}
+
+#hovered::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff05;
+}
+
+    </style>
 </head>
 <body>
-    <h1>Soon to be a grid drawing tool.</h1>
+    <div id="grid"></div>
+
+    <script>
+
+const COLORS = [
+    '',
+    '#F00',
+    '#0F0',
+    '#00F',
+    '#0FF',
+    '#F0F',
+    '#FF0',
+]
+
+const H = 100
+const W = 100
+let grid = document.getElementById('grid')
+grid.style.width = `${W*2}em`
+
+let last_color = COLORS[1]
+
+for (let y = 0; y < H; ++y) {
+    let row = document.createElement('div')
+    for (let x = 0; x < W; ++x) {
+        let cell = document.createElement('div')
+        cell.onmouseenter = e => {
+            cell.id = 'hovered'
+        } 
+        cell.onmouseleave = e => {
+            cell.removeAttribute('id')
+        }
+        row.appendChild(cell)
+    }
+    grid.appendChild(row)
+}
+
+document.onkeydown = e => {
+    const index = e.key == ' ' ? 0 : parseInt(e.key)
+    if (isNaN(index)) return true
+
+    last_color = COLORS[index]
+
+    let cell = document.getElementById('hovered')
+    if (cell === null) return true
+
+    cell.style.background = last_color
+    return false
+}
+
+    </script>
 </body>
 </html>
