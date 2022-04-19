@@ -23,7 +23,12 @@ if os.name == 'nt':
 @click.group()
 @click.pass_context
 def main(ctx: click.Context) -> None:
-    '''Entry point for all cpt commands.'''
+    '''
+    Entry point for all cpt commands.
+
+    Run `cpt COMMAND --help` for more
+    info about the command.
+    '''
     ctx.ensure_object(dict)
 
 
