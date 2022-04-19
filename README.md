@@ -1,5 +1,8 @@
 # Competitive Programming Tools
-My tools, templates, and structures for programming competitions.
+My tools for programming competitions.
+
+My data structures and algorithms have a new home:
+https://github.com/Hegdahl/competitive-programming-lib
 
 ```bash
 > cpt --help
