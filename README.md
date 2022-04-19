@@ -30,7 +30,7 @@ Commands:
 ```
 
 ## Example usage
-![example-usage](./doc/example_usage.gif)
+![example-usage](./docs/example_usage.gif)
 
 ## Platform support
 No.
