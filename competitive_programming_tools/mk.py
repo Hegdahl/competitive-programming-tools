@@ -13,7 +13,7 @@ NO_EXIST = click.Path(file_okay=False, dir_okay=False)
 @click.argument('path', type=NO_EXIST)
 @click.pass_context
 # pylint: disable=invalid-name
-def mk(path: str, ctx: click.Context = None) -> str:
+def mk(ctx: click.Context, path: str) -> str:
     '''Create a file containing snippets/main'''
     if not path.endswith('.cpp'):
         return mk(NO_EXIST.convert(f'{path}.cpp', None, ctx))
@@ -29,5 +29,5 @@ def mk(path: str, ctx: click.Context = None) -> str:
 @click.argument('path', type=NO_EXIST)
 def mke(path: str) -> None:
     '''Create a file containing snippets/main and open it in $EDITOR'''
-    path = mk(path=path)
+    path = mk(path)
     os.system(f'$EDITOR {path}')
