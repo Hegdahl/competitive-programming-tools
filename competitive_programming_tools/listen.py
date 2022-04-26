@@ -65,7 +65,10 @@ class ProblemLoader:
         for a solution file, and save sample
         test input and output.
         '''
-        user_vairable = 'USERNAME' if os.name == 'nt' else 'USER'
+        if 'CPT_USERNAME' in os.environ:
+            user_vairable = 'CPT_USERNAME'
+        else:
+            user_vairable = 'USERNAME' if os.name == 'nt' else 'USER'
 
         header = (
             '/**\n'
