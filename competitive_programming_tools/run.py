@@ -164,8 +164,6 @@ def run_test(executable: str,
         checker_result = LenientChecker(output, answer)
 
         if not checker_result.accept:
-            click.secho('[DIFF]',
-                        bold=True, fg='yellow', err=True)
             verdict_str = click.style('WA', fg='red')
             click.echo(''.join((
                 click.style('Finished ', fg='red'),
