@@ -12,8 +12,7 @@ from typing import Any, Callable
 
 import click
 
-from .utils import warn
-from .get import get as get_snippet
+from .utils import error, warn
 
 
 def format_name(title: str) -> str:
@@ -115,7 +114,22 @@ class ProblemLoader:
                  ' already exists!')
         else:
             with open(sol_path, 'w', encoding='utf-8') as file:
-                main_src = get_snippet('main', silent=True)
+                main_src = 'int main() {\n}'
+                try:
+                    main_path = os.environ['CPT_DEFAULT_MAIN']
+                    with open(main_path, 'r', encoding='UTF-8') as main_file:
+                        main_src = main_file.read()
+                except KeyError:
+                    warn('The environment variable ' +
+                        click.style(repr('CPT_DEFAULT_MAIN'), fg='yellow') +
+                        ' is not set.\n'
+                        'Set it to specify the path to a file containing the default\n'
+                        'content below the header comment for the generated files.')
+                except FileNotFoundError:
+                    error('Could not find the file ' +
+                          click.style(repr(main_path), fg='yellow') +
+                          '.\nFallbacking to a simple default.')
+                
                 assert main_src is not None
                 file.write(header + main_src)
 

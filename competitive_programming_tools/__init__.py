@@ -8,7 +8,6 @@ import click
 from . import utils
 
 from .expand import expand
-from .get import get
 from .listen import listen
 from .run import run
 from .stress import stress
@@ -38,7 +37,6 @@ def flush() -> None:
 
 
 main.command()(expand)
-main.command()(get)
 main.command()(listen)
 main.command()(run)
 main.command()(stress)
