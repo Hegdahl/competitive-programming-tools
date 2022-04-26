@@ -10,7 +10,6 @@ from . import utils
 from .expand import expand
 from .get import get
 from .listen import listen
-from .mk import mk, mke
 from .run import run
 from .stress import stress
 from .submit import submit
@@ -41,8 +40,6 @@ def flush() -> None:
 main.command()(expand)
 main.command()(get)
 main.command()(listen)
-main.command()(mk)
-main.command()(mke)
 main.command()(run)
 main.command()(stress)
 main.command()(submit)
