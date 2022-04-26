@@ -211,15 +211,26 @@ def run_test(executable: str,
                   '    speed and information.\n'
                   '>1: Higher levels may exist\n'
                   '    depending on language.\n\b\n'
-              ))
+))
 @click.option('-fr', '--force-recompile', is_flag=True,
-              help='If this flag is set, the program will'
+              help='If this flag is set, the program will '
                    'be recompiled even if unneccesary.')
-@click.option('-e', '--extra-flags', default='')
-@click.option('-T', '--testset', type=str)
-@click.option('-i', '--interactor', type=str)
+@click.option('-e', '--extra-flags', default='',
+              help='Pass extra arguments in the compilation.')
+@click.option('-T', '--testset', type=str,
+              help=('Select which tests to run. '
+                    "Either the pattern 'some/directory/prefix' "
+                    'to run all tests in the directory with a basename '
+                    'starting with the prefix '
+                    '(.in for input, .ans for correct output) '
+                    "or '-' to use standard input instead of test files. "
+                    "The default is 'samples/{source_filename_without_suffix}'"))
+@click.option('-i', '--interactor', type=str,
+              help=('Run the program against an interactor '
+                    'instead of on input files. '
+                    'The value should be something executable.'))
 @click.option('--no-style-stderr', is_flag=True,
-              help='Modify stderr to make it clearer which part it is')
+              help='Disable highlighting which part of output is stderr.')
 def run(source: str,
         argv: List[str],
         debug_level: int,
