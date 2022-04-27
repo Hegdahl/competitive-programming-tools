@@ -3,6 +3,7 @@ General utilities.
 '''
 
 import os
+import pathlib
 import time
 from typing import Any, Callable, Tuple
 
@@ -10,8 +11,13 @@ import click
 
 DIRNAME = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 TMP_DIR = os.path.join(os.environ['TEMP'], 'competitive_programming_tools')
-if not os.path.exists(TMP_DIR):
-    os.mkdir(TMP_DIR)
+
+
+def ensure_dir(path):
+    '''Create a directory at the path if it wasn't there.'''
+    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+
+ensure_dir(TMP_DIR)
 
 
 def warn(message: str) -> None:

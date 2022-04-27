@@ -9,6 +9,7 @@ from . import utils
 
 from .expand import expand
 from .listen import listen
+from .mkpch import mkpch
 from .run import run
 from .stress import stress
 from .submit import submit
@@ -38,6 +39,7 @@ def flush() -> None:
 
 main.command()(expand)
 main.command()(listen)
+main.command()(mkpch)
 main.command()(run)
 main.command()(stress)
 main.command()(submit)

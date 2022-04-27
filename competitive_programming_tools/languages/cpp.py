@@ -1,6 +1,6 @@
 import os
 
-from ..utils import DIRNAME
+from ..utils import DIRNAME, TMP_DIR
 from .language import Language
 
 WARNINGS = (
@@ -18,7 +18,7 @@ GLIBCXX_DEBUG = '-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC '
 
 CPP = Language(
     name='C++',
-    suffixes=('cpp', 'cxx', 'cc'),
+    suffixes=('cpp', 'cxx', 'cc', 'hpp'),
     debug_levels=(
         '-O2',
         '-O1 -g3 -DENABLE_DEBUG ' + GLIBCXX_DEBUG,
@@ -28,7 +28,9 @@ CPP = Language(
     compile_format=(
         f'g++ -std=gnu++2a {WARNINGS} '
         '{debug_level} {extra_flags} '
-        '{source_path} -o {executable_path}'
+        '{source_path} -o {executable_path} '
+        f'-I{TMP_DIR}'
+        '/pch/{debug_level_id}/'
     ),
     cf_id=73,
 )

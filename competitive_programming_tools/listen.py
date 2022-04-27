@@ -12,7 +12,7 @@ from typing import Any, Callable
 
 import click
 
-from .utils import error, warn
+from .utils import ensure_dir, error, warn
 
 
 def format_name(title: str) -> str:
@@ -83,8 +83,7 @@ class ProblemLoader:
 
         if data['tests']:
             sample_dir = os.path.join(self.contest_directory, 'samples')
-            if not os.path.exists(sample_dir):
-                os.mkdir(sample_dir)
+            ensure_dir(sample_dir)
 
             for i, sample in enumerate(data['tests']):
                 in_path = os.path.join(

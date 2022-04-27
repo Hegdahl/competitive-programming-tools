@@ -28,5 +28,6 @@ class Language:
         return partial(
             self.compile_format.format,
             debug_level=self.debug_levels[debug_level],
+            debug_level_id=debug_level,
             extra_flags=extra_flags,
         )
