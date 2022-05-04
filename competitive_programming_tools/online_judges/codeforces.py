@@ -4,11 +4,14 @@ Provides :py:class:`Codeforces`.
 
 import asyncio
 import os
+import re
 
 import aiohttp
 from asyncspinner import Spinner
 from bs4 import BeautifulSoup
 import click
+from Crypto.Cipher import AES
+import yarl
 
 from .online_judge import OnlineJudge
 from ..utils import error, TMP_DIR
@@ -45,7 +48,44 @@ class Codeforces(OnlineJudge):
         async with session.post(url, data=inputs) as response:
             return response.status, await response.text()
 
-    def find_submission_error(self, html_text):
+    def _dump_error(self, body, message):
+        path = os.path.join(TMP_DIR, 'dump.html')
+        with open(path, 'w', encoding='utf-8') as dump:
+            dump.write(str(body))
+        error('html dumped here:')
+        click.secho(path, fg='yellow')
+        error(message)
+
+    async def _attempt_rcpc(self, session, soup):
+        if not soup.body.encode_contents().startswith(b'Redirecting...'):
+            return soup
+
+        for script in soup.body.find_all('script'):
+            content = script.encode_contents().decode()
+            matches = re.findall(r'toNumbers\((\'|")([0-9a-fA-F]*)(\'|")\)', content)
+            if len(matches) != 3:
+                continue
+
+            key = bytes.fromhex(matches[0][1])
+            iv = bytes.fromhex(matches[1][1])
+            encrypted = bytes.fromhex(matches[2][1])
+
+            aes = AES.new(key, IV=iv, mode=AES.MODE_CBC)#, segment_size=128)
+            res = aes.decrypt(encrypted)
+
+            session.cookie_jar.update_cookies({
+                'RCPC': res.hex()
+            }, yarl.URL(Codeforces.LOGIN_URL))
+            async with session.get(Codeforces.LOGIN_URL) as response:
+                assert response.status == 200
+                return BeautifulSoup(
+                    await response.text(),
+                    features='html5lib'
+                )
+        
+        return soup
+
+    def _find_submission_error(self, html_text):
         '''
         Look for what went wrong with a submission,
         and return the message as a string if found.
@@ -54,7 +94,7 @@ class Codeforces(OnlineJudge):
         error_span = soup.find('span', class_='error')
         if error_span is not None:
             return error_span.text
-
+    
     async def _update_submission_info(self, session, url, info):
         async with session.get(url) as response:
             assert response.status == 200
@@ -83,11 +123,7 @@ class Codeforces(OnlineJudge):
             info['time'] = ' '.join(time_cell.text.strip().split())
             info['memory'] = ' '.join(memory_cell.text.strip().split())
         except Exception:
-            path = os.path.join(TMP_DIR, 'dump.html')
-            with open(path, 'w', encoding='utf-8') as dump:
-                dump.write(str(soup))
-            error('Error during parsing of the html dumped here:')
-            click.secho(path, fg='yellow')
+            self._dump_error(soup, 'Failed parsing.')
             raise
 
     async def submit(self, url, solution, lang):
@@ -103,12 +139,20 @@ class Codeforces(OnlineJudge):
                     await response.text(),
                     features='html5lib'
                 )
-            login_form = soup.find(id='enterForm')
-            status, _ = await self._post_form(
-                session, Codeforces.LOGIN_URL, login_form,
-                handleOrEmail=self.username,
-                password=self.password,
-            )
+            soup = await self._attempt_rcpc(session, soup)
+            try:
+                login_form = soup.find(id='enterForm')
+                status, _ = await self._post_form(
+                    session, Codeforces.LOGIN_URL, login_form,
+                    handleOrEmail=self.username,
+                    password=self.password,
+                )
+            except Exception:
+                click.echo(response.status, err=True)
+                click.echo(response.headers, err=True)
+                self._dump_error(soup, 'Failed parsing.')
+                raise
+
             if status != 200:
                 click.echo(err=True)
                 error('Failed logging in.')
@@ -133,7 +177,7 @@ class Codeforces(OnlineJudge):
                 error('Failed submitting')
                 return
 
-            submit_error = self.find_submission_error(submission_response)
+            submit_error = self._find_submission_error(submission_response)
             if submit_error is not None:
                 click.echo(err=True)
                 error(submit_error)
