@@ -24,7 +24,7 @@ class Kattis(OnlineJudge):
     URL_PATTERN = r'^https://(.+)\.kattis\.com/(?:w+/)*problems/(.*)$'
 
     SUBMISSION_ID_PATTERN = r'^Submission received\. Submission ID: (\d+)\.$'
-    TEST_NUMBER_PATTERN = r'Test case (\d+)/(\d+): (.+)'
+    TEST_NUMBER_PATTERN = r'(\d+)/(\d+)'
 
     SUBMIT_URL = '{url}/submit'
     LOGIN_URL = 'https://{subdomain}.kattis.com/login'
@@ -151,32 +151,23 @@ class Kattis(OnlineJudge):
 
                     test_str = ''
                     try:
-                        tests_ele = (soup
-                                     .find(attrs={'data-type': 'testcases'})
-                                     .find(class_='testcases')
-                                     )
+                        tests_ele = soup.find(attrs={'data-type': 'testcases'})
 
-                        max_num = 0
-                        max_den = 0
+                        num = 0
+                        den = 0
 
                         for test_ele in tests_ele.findChildren():
                             test_number_match = re.match(
                                 Kattis.TEST_NUMBER_PATTERN,
-                                test_ele.get('title', ''),
+                                test_ele.decode_contents(),
                             )
                             if test_number_match is None:
                                 continue
                             num = int(test_number_match[1])
                             den = int(test_number_match[2])
-                            test_verdict = test_number_match[3]
 
-                            if (test_verdict.lower() in
-                                    Kattis.ACCEPTED_VERDICTS):
-                                max_num = max(num, max_num)
-                            max_den = max(den, max_den)
-
-                        if max_den:
-                            test_str = f'{min(max_num+1, max_den)}/{max_den} '
+                        if den:
+                            test_str = f'{num}/{den} '
 
                     except (AttributeError, TypeError) as exc:
                         try:

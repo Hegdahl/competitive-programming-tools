@@ -6,12 +6,13 @@ import asyncio
 import random
 import re
 import time
-from typing import Awaitable, Callable, Optional, Sequence, Tuple
+from typing import cast, Awaitable, Callable, Optional, Sequence, Tuple
 
 import click
 import tqdm  # type: ignore
 
 from .auto_path import AutoPath
+from .execute import execute_interactive_impl
 from .get_executable import get_executable
 from .utils import error
 
@@ -94,19 +95,53 @@ def search(func: Callable[[], Awaitable[None]],
 
 
 async def silent_run(input_data: Optional[bytes],
-                     solution: str) -> Tuple[bytes, int]:
+                     solution: str,
+                     interactor: Optional[str]) -> Tuple[bytes, int]:
     '''
     Run `solution` with `input_data` fed to stdin
     without any output forwarded to stdout.
     '''
+
     proc = await asyncio.create_subprocess_shell(
         solution,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
     )
-    stdout, _ = await proc.communicate(input_data)
-    return stdout, await proc.wait()
+
+    if interactor is None:
+        stdout, _ = await proc.communicate(input_data)
+        return stdout, await proc.wait()
+
+    interactor_proc = await asyncio.create_subprocess_shell(
+        interactor,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+
+    interactor_proc.stdin.write(input_data)
+
+    async def forward(src: asyncio.StreamReader,
+                      dst: asyncio.StreamWriter):
+        while (line_bytes := (await src.readline())):
+            line = line_bytes.decode()
+            dst.write(line_bytes)
+
+    await asyncio.gather(
+        forward(
+            cast(asyncio.StreamReader, proc.stdout),
+            cast(asyncio.StreamWriter, interactor_proc.stdin),
+        ),
+        forward(
+            cast(asyncio.StreamReader, interactor_proc.stdout),
+            cast(asyncio.StreamWriter, proc.stdin),
+        )
+    )
+
+    return b'', (await proc.wait()) | (await interactor_proc.wait())
+
+
 
 
 @click.argument('source', type=AutoPath())
@@ -125,6 +160,7 @@ async def silent_run(input_data: Optional[bytes],
 @click.option('-fr', '--force-recompile', is_flag=True,
               help='If this flag is set, the program will'
                    'be recompiled even if unneccesary.')
+@click.option('-i', '--interactor', type=str)
 @click.option('-e', '--extra-flags', default='')
 @click.option('-ca', '--check-against', type=AutoPath())
 @click.option('-t', '--timeout', default=10.0)
@@ -133,6 +169,7 @@ def stress(source: str,
            pattern: Sequence[str],
            debug_level: int,
            force_recompile: bool,
+           interactor: Optional[str],
            extra_flags: str,
            check_against: Optional[str],
            timeout: float,
@@ -176,7 +213,7 @@ def stress(source: str,
         nonlocal total_tests
         total_tests += 1
         test_gen_command = ' '.join(arg.get() for arg in processed_args)
-        input_data, genr_exit_code = await silent_run(None, test_gen_command)
+        input_data, genr_exit_code = await silent_run(None, test_gen_command, None)
 
         if genr_exit_code:
             raise CountertestFound(
@@ -185,7 +222,7 @@ def stress(source: str,
                 f'resulted in the generator crashing ({genr_exit_code=})',
             )
 
-        out, soln_exit_code = await silent_run(input_data, soln_exe)
+        out, soln_exit_code = await silent_run(input_data, soln_exe, interactor)
         if soln_exit_code:
             raise CountertestFound(
                 'The command:',
@@ -194,7 +231,7 @@ def stress(source: str,
             )
 
         if check_exe is not None:
-            ans, check_exit_code = await silent_run(input_data, check_exe)
+            ans, check_exit_code = await silent_run(input_data, check_exe, interactor)
             if check_exit_code:
                 raise CountertestFound(
                     'The command:',

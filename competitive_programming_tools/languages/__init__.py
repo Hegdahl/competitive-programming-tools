@@ -1,7 +1,9 @@
+from .c import C
 from .cpp import CPP
 from .py import PY
+from .rs import RS
 
-LANGUAGES = (CPP, PY)
+LANGUAGES = (C, CPP, PY, RS)
 
 SUFF_TO_LANG = {
     suffix: language
