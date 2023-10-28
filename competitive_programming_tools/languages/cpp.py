@@ -4,7 +4,7 @@ from .language import Language
 WARNINGS = (
     '-Wall -Wextra -Wshadow -Wformat=2 -Wfloat-equal -Wconversion '
     '-Wlogical-op -Wshift-overflow -Wduplicated-cond -Wcast-qual -Wcast-align '
-    '-Wno-variadic-macros '
+    '-Wno-variadic-macros -Wno-sign-conversion '
 )
 
 SANITIZERS = (
@@ -18,8 +18,8 @@ CPP = Language(
     name='C++',
     suffixes=('cpp', 'cxx', 'cc', 'hpp'),
     debug_levels=(
-        '-O2',
-        '-O1 -g3 -DENABLE_DEBUG ' + GLIBCXX_DEBUG,
+        '-O2 -g0',
+        '-O1 -g0 -DENABLE_DEBUG ',
         '-O0 -g3 -DENABLE_DEBUG ' + SANITIZERS,
         '-O0 -g3 -DENABLE_DEBUG ' + GLIBCXX_DEBUG + SANITIZERS,
     ),
@@ -27,8 +27,6 @@ CPP = Language(
         f'g++ -std=gnu++2a {WARNINGS} '
         '{debug_level} {extra_flags} '
         '{source_path} -o {executable_path} '
-        f'-I{TMP_DIR}'
-        '/pch/{debug_level_id}/'
     ),
     cf_id=73,
 )

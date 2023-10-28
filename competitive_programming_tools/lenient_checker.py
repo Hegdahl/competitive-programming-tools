@@ -1,16 +1,10 @@
 '''
 Provides :py:class:`LenientChecker`
 '''
-from typing import cast, Any, Callable, Dict, List, TypeAlias
 import re
 
 ACCEPTABLE_PRECISION_ERROR = 1e-3
 
-WarningSet: TypeAlias = Dict[str, float]
-IgnoredPropertyChecker: TypeAlias = Callable[[str, str, WarningSet], bool]
-
-check_float_format = re.compile(r'^\d+\.\d+$')
-whitespace_chunk = re.compile(r'(\s+)')
 
 
 class LenientChecker:
@@ -18,33 +12,38 @@ class LenientChecker:
     Class for checkign whether two
     output files approximately match.
     '''
-    IGNORE_PROPERTY: Dict[str, IgnoredPropertyChecker] = {}
+    IGNORE_PROPERTY = {}
+    CHECK_FLOAT_FORMAT = None
+    WHITESPACE_CHUNK = None
 
     @classmethod
-    def register_ignore(cls, name: str) -> Callable[[Any], Any]:
+    def register_ignore(cls, name):
         '''
         Add a function to the set of functions
         to compare tokens ignoring some property.
         '''
-        def dec(func: IgnoredPropertyChecker) -> IgnoredPropertyChecker:
+        def dec(func):
             cls.IGNORE_PROPERTY[name] = func
             return func
         return dec
 
-    def __init__(self, participant_answer: str, judge_answer: str):
+    def __init__(self, participant_answer, judge_answer):
+        import re
+        if LenientChecker.CHECK_FLOAT_FORMAT is None:
+            LenientChecker.CHECK_FLOAT_FORMAT = re.compile(r'^\d+\.\d+$')
+            LenientChecker.WHITESPACE_CHUNK = re.compile(r'(\s+)')
+
         self.accept = False
         self.ignored_properties = set()
-        self.warnings: WarningSet = dict()
+        self.warnings = dict()
 
-        p_tokens = cast(List[str], whitespace_chunk.split(participant_answer))
-        j_tokens = cast(List[str], whitespace_chunk.split(judge_answer))
+        p_tokens = LenientChecker.WHITESPACE_CHUNK.split(participant_answer)
+        j_tokens = LenientChecker.WHITESPACE_CHUNK.split(judge_answer)
 
         if len(p_tokens) != len(j_tokens):
             self.ignored_properties.add('whitespace')
-            p_tokens = cast(
-                List[str], whitespace_chunk.split(participant_answer.strip()))
-            j_tokens = cast(
-                List[str], whitespace_chunk.split(judge_answer.strip()))
+            p_tokens = LenientChecker.WHITESPACE_CHUNK.split(participant_answer.strip())
+            j_tokens = LenientChecker.WHITESPACE_CHUNK.split(judge_answer.strip())
 
         if len(p_tokens) != len(j_tokens):
             return
@@ -64,9 +63,7 @@ class LenientChecker:
 
 
 @LenientChecker.register_ignore('whitespace')
-def ignore_whitespace(p_token: str,
-                      j_token: str,
-                      _: WarningSet) -> bool:
+def ignore_whitespace(p_token, j_token, _):
     '''
     Report tokens as equal if they are both whitespace.
     '''
@@ -74,7 +71,7 @@ def ignore_whitespace(p_token: str,
 
 
 @LenientChecker.register_ignore('case')
-def ignore_case(p_token: str, j_token: str, _: WarningSet) -> bool:
+def ignore_case(p_token, j_token, _):
     '''
     Report tokens as equal if they are the
     same after ignoring letter case.
@@ -83,15 +80,13 @@ def ignore_case(p_token: str, j_token: str, _: WarningSet) -> bool:
 
 
 @LenientChecker.register_ignore('precision')
-def ignore_precision(p_token: str, j_token: str, warnings: WarningSet) -> bool:
+def ignore_precision(p_token, j_token, warnings):
     '''
     Report tokens as equal if both look like floating point numbers,
     and their absolute or relative error is less than
     :py:const:`ACCEPTABLE_PRECISION_ERROR`
     '''
-    if check_float_format.match(p_token) is None:
-        return False
-    if check_float_format.match(p_token) is None:
+    if LenientChecker.CHECK_FLOAT_FORMAT.match(p_token) is None:
         return False
 
     p_val = float(p_token)

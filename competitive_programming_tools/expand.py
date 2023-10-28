@@ -1,21 +1,16 @@
 '''
 Provides :py:func:`expand`.
 '''
-
-import re
-import os
 from typing import Optional, Set, Tuple
 
 import click
 
-from .utils import TMP_DIR
 from .auto_path import AutoPath
 from .stdin_or import StdinOr
 
-include_matcher = re.compile(r'^#include\s*(<|")(.*)(>|")$')
 
 
-def get_inner_path(line: str) -> Tuple[Optional[str], Optional[str]]:
+def get_inner_path(current_dir, line: str) -> Tuple[Optional[str], Optional[str]]:
     '''
     Find the path of an included file.
     Returns (path, filename).
@@ -23,6 +18,14 @@ def get_inner_path(line: str) -> Tuple[Optional[str], Optional[str]]:
     file was not found in the environment
     variable `CPT_EXPAND_PATH`, return (None, None).
     '''
+    import os
+
+    local_match = local_include_matcher.match(line)
+    if local_match:
+        path = os.path.join(current_dir, local_match.group(1))
+        if os.path.isfile(path):
+            return path, local_match.group(1)
+
     match = include_matcher.match(line)
     if not match:
         return None, None
@@ -57,13 +60,15 @@ def expand_impl(path: str,
 
     Comments are removed unless the file top level.
     '''
+    import os
+
     res = []
     with open(path, encoding='utf-8') as file:
         for line in file:
             if should_skip(line, is_top_level):
                 continue
 
-            inner_path, inner_name = get_inner_path(line)
+            inner_path, inner_name = get_inner_path(os.path.dirname(path), line)
 
             if inner_path is None or inner_name is None:
                 assert inner_path is None and inner_name is None
@@ -85,6 +90,14 @@ def expand(source: str, tmp_file: bool, is_cli=True) -> Optional[str]:
     Replace cpt includes with source code (for submission to online judges)
     Specifically for C++.
     '''
+    global include_matcher, local_include_matcher
+    import re
+    import os
+    from .utils import TMP_DIR
+
+    include_matcher = re.compile(r'^#include\s*(<|")(.*)(>|")$')
+    local_include_matcher = re.compile(r'^#include\s*"(.*)"$')
+
     res = expand_impl(source, set())
 
     if tmp_file:

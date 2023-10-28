@@ -2,20 +2,19 @@
 Provides functions for executing
 programs from source code and testing them.
 '''
-import asyncio
-from typing import cast, Optional, Sequence, TextIO, Tuple
-
 import click
 
 
-async def execute_impl(executable: str,
-                       argv: Sequence[str],
-                       input_file: TextIO,
-                       style_stderr: bool) -> Tuple[int, str]:
+async def execute_impl(executable,
+                       argv,
+                       input_file,
+                       style_stderr):
     '''
     Run an executable with the given argv and input file,
     and return the exit code and standard output.
     '''
+    import asyncio
+
     output_chunks = []
 
     proc = await asyncio.create_subprocess_shell(
@@ -28,14 +27,14 @@ async def execute_impl(executable: str,
 
     was_err = False
 
-    async def process_stdout(stdout: asyncio.StreamReader) -> None:
+    async def process_stdout(stdout):
         nonlocal was_err
         while (line := (await stdout.readline()).decode()):
             output_chunks.append(line)
             print(line, end='')
             was_err = False
 
-    async def process_stderr(stderr: asyncio.StreamReader) -> None:
+    async def process_stderr(stderr):
         nonlocal was_err
         while (line := (await stderr.readline()).decode()):
             if style_stderr:
@@ -49,18 +48,18 @@ async def execute_impl(executable: str,
             was_err = True
 
     await asyncio.gather(
-            process_stdout(cast(asyncio.StreamReader, proc.stdout)),
-            process_stderr(cast(asyncio.StreamReader, proc.stderr)),
+            process_stdout(proc.stdout),
+            process_stderr(proc.stderr),
     )
 
     return await proc.wait(), ''.join(output_chunks)
 
 
-async def execute_interactive_impl(executable: str,
-                                   interactor: str,
-                                   argv: Sequence[str],
-                                   sample_in: Sequence[str]
-                                   ) -> Tuple[int, int]:
+async def execute_interactive_impl(executable,
+                                   interactor,
+                                   argv,
+                                   sample_in,
+                                   ):
     '''
     Run two executables communicating to each other
     through stdin and stdout.
@@ -70,6 +69,7 @@ async def execute_interactive_impl(executable: str,
     `sample_in` is given to `interactor`'s stdin
     before the communication starts.
     '''
+    import asyncio
 
     exec_proc = await asyncio.create_subprocess_shell(
         executable,
@@ -87,11 +87,11 @@ async def execute_interactive_impl(executable: str,
 
     last_begin_pre = ''
 
-    async def forward(src: asyncio.StreamReader,
-                      dst: asyncio.StreamWriter,
-                      begin_pre: str,
-                      continue_pre: str,
-                      echo_color: Optional[str] = None) -> None:
+    async def forward(src,
+                      dst,
+                      begin_pre,
+                      continue_pre,
+                      echo_color = None):
         nonlocal last_begin_pre
         while (line_bytes := (await src.readline())):
             line = line_bytes.decode()
@@ -107,18 +107,18 @@ async def execute_interactive_impl(executable: str,
         click.secho('[SAMPLE]', fg='yellow', bold=True)
     for line in sample_in:
         click.echo(line, nl=False)
-        cast(asyncio.StreamWriter, inte_proc.stdin).write(line.encode())
+        inte_proc.stdin.write(line.encode())
 
     await asyncio.gather(
         forward(
-            cast(asyncio.StreamReader, exec_proc.stdout),
-            cast(asyncio.StreamWriter, inte_proc.stdin),
+            exec_proc.stdout,
+            inte_proc.stdin,
             click.style('\nEXECUTABLE | ', fg='blue', bold=True),
             click.style('           | ', fg='blue', bold=True),
         ),
         forward(
-            cast(asyncio.StreamReader, inte_proc.stdout),
-            cast(asyncio.StreamWriter, exec_proc.stdin),
+            inte_proc.stdout,
+            exec_proc.stdin,
             click.style('\nINTERACTOR | ', fg='magenta', bold=True),
             click.style('           | ', fg='magenta', bold=True),
             'yellow',
@@ -128,25 +128,22 @@ async def execute_interactive_impl(executable: str,
     return await exec_proc.wait(), await inte_proc.wait()
 
 
-def execute(executable: str,
-            argv: Sequence[str],
-            input_file: TextIO,
-            style_stderr: bool) -> Tuple[int, str]:
+def execute(executable, argv, input_file, style_stderr):
     '''
     Wrapper for :py:function:`execute_impl` to start it
     in an async context.
     '''
+    import asyncio
     return asyncio.run(execute_impl(
         executable, argv, input_file, style_stderr))
 
 
-def execute_interactive(executable: str,
-                        interactor: str,
-                        argv: Sequence[str],
-                        sample_in: Sequence[str]) -> Tuple[int, int]:
+def execute_interactive(executable, interactor, argv, sample_in):
     '''
     Wrapper for :py:func:`execute_interactive_impl` to start it
     in an async context.
     '''
+    import asyncio
     return asyncio.run(execute_interactive_impl(
         executable, interactor, argv, sample_in))
+

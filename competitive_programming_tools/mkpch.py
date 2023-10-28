@@ -18,13 +18,13 @@ def mkpch(header):
     with open(header_holder_path, 'w', encoding='UTF-8') as header_holder:
         header_holder.write(f'#include <{header}>')
 
-    pch_dir = os.path.join(TMP_DIR, 'pch')
+    pch_dir = os.path.join(TMP_DIR, 'include')
 
     for debug_level in range(len(CPP.debug_levels)):
-        dir = os.path.join(pch_dir, str(debug_level), os.path.dirname(header))
-        ensure_dir(dir)
+        dirname = os.path.join(pch_dir, f'{header}.gch')
+        ensure_dir(dirname)
 
-        path = os.path.join(dir, f'{os.path.basename(header)}.gch')
+        path = os.path.join(dirname, f'{debug_level}.gch')
         if os.path.exists(path):
             os.remove(path)
 

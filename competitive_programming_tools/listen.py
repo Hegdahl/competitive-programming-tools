@@ -3,19 +3,10 @@ Listen for information about problems
 from the "Competitive Companion" extension.
 '''
 
-from datetime import datetime
-import http.server
-import json
-import os
-import threading
-from typing import Any, Callable
-
 import click
 
-from .utils import ensure_dir, error, warn
 
-
-def format_name(title: str) -> str:
+def format_name(title):
     '''
     Changes a problem title
     into a suitable filename.
@@ -55,16 +46,20 @@ class ProblemLoader:
     to the file system.
     '''
 
-    def __init__(self, contest_directory: str):
+    def __init__(self, contest_directory):
         self.contest_directory = contest_directory
 
-    def __call__(self, data: Any) -> None:
+    def __call__(self, data):
         '''
         Given information about a problem,
         create a file containing boilerplate
         for a solution file, and save sample
         test input and output.
         '''
+        from datetime import datetime
+        import os
+        from .utils import ensure_dir, error, warn
+
         if 'CPT_USERNAME' in os.environ:
             user_vairable = 'CPT_USERNAME'
         else:
@@ -140,11 +135,13 @@ class ProblemLoader:
                    err=True)
 
 
-def make_http_request_handler(json_handler: Callable[[Any], None]) -> Any:
+def make_http_request_handler(json_handler):
     '''
     Create a simple wrapper for sending
     JSON from HTTP requests to handler.
     '''
+    import http.server
+    import json
 
     class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         '''
@@ -153,7 +150,7 @@ def make_http_request_handler(json_handler: Callable[[Any], None]) -> Any:
         '''
 
         # pylint: disable=invalid-name
-        def do_POST(self) -> None:
+        def do_POST(self):
             '''
             Attempt to read JSON from a POST
             request and pass it to `json_handler`.
@@ -166,7 +163,7 @@ def make_http_request_handler(json_handler: Callable[[Any], None]) -> Any:
             self.send_response(200)
             self.end_headers()
 
-        def log_message(self, *_: Any, **__: Any) -> None:
+        def log_message(self, *_, **__):
             pass
 
     return HTTPRequestHandler
@@ -175,11 +172,15 @@ def make_http_request_handler(json_handler: Callable[[Any], None]) -> Any:
 @click.argument('directory', required=False,
                 type=click.Path(file_okay=False, dir_okay=True))
 @click.option('-p', '--port', type=click.IntRange(0, 65535), default=10042)
-def listen(directory: str, port: int) -> None:
+def listen(directory, port):
     '''
     Listen for information about problems
     from the "Competitive Companion" extension.
     '''
+    import http.server
+    import os
+    import threading
+    from .utils import warn
 
     if directory is None:
         directory = os.getcwd()

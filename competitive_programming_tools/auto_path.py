@@ -1,9 +1,6 @@
 '''
 Provides :py:class:`AutoPath`.
 '''
-import os
-from typing import cast, Callable, Optional, Sequence, Union
-
 import click
 
 from .languages import SUFF_TO_LANG
@@ -17,25 +14,18 @@ class AutoPath(click.ParamType):
     name = 'auto-path'
 
     def __init__(self,
-                 suffixes: Sequence[str] = tuple(SUFF_TO_LANG.keys()),
-                 root: Union[str, os.PathLike[str]] = ''):
+                 suffixes = tuple(SUFF_TO_LANG.keys()),
+                 root = ''):
         self.suffixes = suffixes
         self.root = root
 
-    def convert(self,
-                value: str,
-                param: Optional[click.Parameter],
-                ctx: Optional[click.Context]) -> os.PathLike[str]:
-
+    def convert(self, value, param, ctx):
+        import os
         value = os.path.join(self.root, value.strip('\n'))
 
         attempts = (value, *(f'{value}.{suffix}' for suffix in self.suffixes))
 
-        converter = cast(
-            Callable[[str, Optional[click.Parameter], Optional[click.Context]],
-                     os.PathLike[str]],
-            click.Path(exists=True, dir_okay=False).convert,
-        )
+        converter = click.Path(exists=True, dir_okay=False).convert
 
         messages = []
 
@@ -50,3 +40,4 @@ class AutoPath(click.ParamType):
             f' {self.suffixes!r} are valid:\n    ' +
             '\n    '.join(messages)
         )
+

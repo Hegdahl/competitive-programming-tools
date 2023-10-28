@@ -2,28 +2,26 @@
 Provides `submit`.
 '''
 
-import asyncio
-import re
-from typing import cast, Type
-
 import click
 
 from .auto_path import AutoPath
-from .expand import expand
-from .languages import SUFF_TO_LANG
-from .online_judges import ONLINE_JUDGES, OnlineJudge
-from .utils import error
-
-url_matcher = re.compile(r' \* url: *(https://.+)')
 
 
 @click.argument('source', type=AutoPath())
-def submit(source: str):
+def submit(source):
     '''
     Figure out where to submit a `source`,
     then submit it and show the result
     in the terminal.
     '''
+    import asyncio
+    import re
+    from .online_judges import ONLINE_JUDGES, OnlineJudge
+    from .languages import SUFF_TO_LANG
+    from .expand import expand
+    from .utils import error
+    url_matcher = re.compile(r' \* url: *(https://.+)')
+
     try:
         suf = source.rsplit('.', 1)[1]
         lang = SUFF_TO_LANG[suf]
@@ -45,7 +43,6 @@ def submit(source: str):
     url = url_match[1]
 
     for OnlineJudgeType in ONLINE_JUDGES:
-        OnlineJudgeType = cast(Type[OnlineJudge], OnlineJudgeType)
         if OnlineJudgeType.accepts_url(url):
             if OnlineJudgeType.FORMAT == 'FILE':
                 path_or_source = expand(source=source,

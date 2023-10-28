@@ -1,9 +1,6 @@
 '''
 Provides :py:class:`StdinOr`.
 '''
-
-from typing import Any, Optional
-
 import click
 
 
@@ -14,13 +11,10 @@ class StdinOr(click.ParamType):
     '''
     name = 'auto-path'
 
-    def __init__(self, inner: Any):
+    def __init__(self, inner):
         self.inner = inner
 
-    def convert(self,
-                value: Any,
-                param: Optional[click.Parameter],
-                ctx: Optional[click.Context]) -> Any:
+    def convert(self, value, param, ctx):
         if value == '-':
             lines = []
             try:

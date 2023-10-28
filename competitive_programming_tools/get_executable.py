@@ -1,13 +1,8 @@
 '''
 Provides :py:func:`get_executable`.
 '''
-from hashlib import sha1
-import os
 
 import click
-
-from .languages import SUFF_TO_LANG
-from .utils import TMP_DIR, error
 
 
 class CompileError(Exception):
@@ -28,6 +23,12 @@ def get_executable(*,
     Get the path to an executable corresponding to the source,
     by compiling, or using previously compiled executable.
     '''
+    import os
+    from hashlib import sha1
+
+    from .languages import SUFF_TO_LANG
+    from .utils import TMP_DIR, error
+
     suffix = source_path.rsplit('.', 1)[-1]
 
     try:

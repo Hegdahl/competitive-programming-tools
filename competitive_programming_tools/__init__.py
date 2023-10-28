@@ -1,11 +1,5 @@
 '''Competitive programming tools'''
-import asyncio
-import os
-
-import shutil
 import click
-
-from . import utils
 
 from .expand import expand
 from .listen import listen
@@ -13,10 +7,6 @@ from .mkpch import mkpch
 from .run import run
 from .stress import stress
 from .submit import submit
-
-if os.name == 'nt':
-    asyncio.set_event_loop_policy(
-        asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore
 
 
 @click.group()
@@ -34,6 +24,8 @@ def main(ctx: click.Context) -> None:
 @main.command()
 def flush() -> None:
     '''Clears temporary data stored by competitive programming tools.'''
+    import shutil
+    from . import utils
     shutil.rmtree(utils.TMP_DIR)
 
 

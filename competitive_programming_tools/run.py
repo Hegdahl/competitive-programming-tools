@@ -1,27 +1,10 @@
 '''Executes a program from source.'''
-
-import os
-import subprocess
-import sys
-from typing import (
-    AnyStr, cast, IO, Optional,
-    List, Sequence, Tuple, Union
-)
-
 import click
 
 from .auto_path import AutoPath
-from .execute import execute, execute_interactive
-from .get_executable import CompileError, get_executable
-from .lenient_checker import LenientChecker
-from .utils import error, warn, time_func
 
 
-def run_interactive(executable: str,
-                    interactor: str,
-                    argv: Sequence[str],
-                    input_path: Union[str, int, None],
-                    test_name: str) -> Tuple[str, float]:
+def run_interactive(executable, interactor, argv, input_path, test_name):
     '''
     Run two processes communicating with each other
     through stdin and stdout, and check that
@@ -30,6 +13,9 @@ def run_interactive(executable: str,
 
     Returns a verdict string and the number of seconds spent.
     '''
+    from .execute import execute_interactive
+    from .utils import error, time_func
+
     if input_path is None:
         input_data = ''
     else:
@@ -71,17 +57,16 @@ def run_interactive(executable: str,
     return verdict_str, time_used
 
 
-def run_diagnostic(executable: str,
-                   argv: Sequence[str],
-                   input_file: IO[AnyStr]) -> None:
+def run_diagnostic(executable, argv, input_file):
     '''
     Run the `executable` with `input_file`
     fed to stdin inside the gnu debugger.
     '''
+    import subprocess
     proc = subprocess.Popen(
         ' '.join((
-            'gdb -batch -ex "run" -ex "bt"',
-            executable, *argv
+            f'gdb -batch -ex "{" ".join(("run", *argv))}" -ex "bt"',
+            executable,
         )),
         shell=True,
         stdin=input_file
@@ -89,12 +74,7 @@ def run_diagnostic(executable: str,
     proc.wait()
 
 
-def run_test(executable: str,
-             interactor: Optional[str],
-             argv: Sequence[str],
-             no_style_stderr: bool,
-             test_dir: str,
-             test_name: str) -> Tuple[str, float]:
+def run_test(executable, interactor, argv, no_style_stderr, test_dir, test_name):
     '''
     Run `executable` with an input
     file and check if the output matches
@@ -111,6 +91,11 @@ def run_test(executable: str,
 
     Returns a verdict string and the number of seconds used.
     '''
+    import os
+    from .execute import execute
+    from .lenient_checker import LenientChecker
+    from .utils import warn, time_func
+
     input_path = os.path.join(test_dir, f'{test_name}.in')
     output_path = os.path.join(test_dir, f'{test_name}.ans')
 
@@ -124,7 +109,7 @@ def run_test(executable: str,
     if interactor is not None:
         verdict_str, time_used = run_interactive(
             executable,
-            cast(str, interactor),
+            interactor,
             argv,
             input_path,
             test_name,
@@ -229,15 +214,13 @@ def run_test(executable: str,
                     'The value should be something executable.'))
 @click.option('--no-style-stderr', is_flag=True,
               help='Disable highlighting which part of output is stderr.')
-def run(source: str,
-        argv: List[str],
-        debug_level: int,
-        force_recompile: bool,
-        extra_flags: str,
-        testset: Optional[str],
-        interactor: Optional[str],
-        no_style_stderr: bool) -> None:
+def run(source, argv, debug_level, force_recompile, extra_flags, testset, interactor, no_style_stderr):
     '''Executes a program from source.'''
+    import sys
+    import os
+    from .execute import execute
+    from .get_executable import CompileError, get_executable
+    from .utils import error, time_func
 
     if testset is None and interactor is None:
         test_dir = os.path.join(os.path.dirname(source), 'samples')
@@ -287,7 +270,7 @@ def run(source: str,
     test_dir = os.path.dirname(testset) or './'
     test_prefix = os.path.basename(testset)
 
-    results: List[Tuple[str, str, float]] = []
+    results = []
 
     for path in sorted(os.listdir(test_dir)):
         if not path.startswith(test_prefix):

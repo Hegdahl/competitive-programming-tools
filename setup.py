@@ -13,6 +13,8 @@ setup(
         'click',
         'html5lib',
         'tqdm',
+        'requests',
+        'pycryptodome'
     ],
     entry_points={
         'console_scripts': [
