@@ -37,7 +37,7 @@ def get_inner_path(current_dir, line: str) -> Tuple[Optional[str], Optional[str]
     return None, None
 
 
-def should_skip(line: str, is_top_level: bool) -> bool:
+def should_skip(line: str, minify: bool, is_top_level: bool) -> bool:
     '''
     Determine whether to exclude a line from
     the expanded code to shorten it a bit.
@@ -45,13 +45,14 @@ def should_skip(line: str, is_top_level: bool) -> bool:
     line = line.strip()
     if line == "#pragma once":
         return True
-    if not is_top_level and (line.startswith('//') or not line):
+    if not is_top_level and minify and (line.startswith('//') or not line):
         return True
     return False
 
 
 def expand_impl(path: str,
                 already_included: Set[str],
+                minify: bool,
                 is_top_level: bool = True) -> str:
     '''
     Replace includes found in `CPT_EXPAND_PATH`
@@ -65,7 +66,7 @@ def expand_impl(path: str,
     res = []
     with open(path, encoding='utf-8') as file:
         for line in file:
-            if should_skip(line, is_top_level):
+            if should_skip(line, minify, is_top_level):
                 continue
 
             inner_path, inner_name = get_inner_path(os.path.dirname(path), line)
@@ -85,7 +86,9 @@ def expand_impl(path: str,
 @click.option('--tmp-file', is_flag=True,
               help=('Put the result in a temporary file and'
                     'print the name of the temp file instead.'))
-def expand(source: str, tmp_file: bool, is_cli=True) -> Optional[str]:
+@click.option('--no-minify', is_flag=True,
+              help=('Keep comments and empty lines in included files'))
+def expand(source: str, tmp_file: bool, no_minify: bool, is_cli=True) -> Optional[str]:
     '''
     Replace cpt includes with source code (for submission to online judges)
     Specifically for C++.
@@ -98,7 +101,9 @@ def expand(source: str, tmp_file: bool, is_cli=True) -> Optional[str]:
     include_matcher = re.compile(r'^#include\s*(<|")(.*)(>|")$')
     local_include_matcher = re.compile(r'^#include\s*"(.*)"$')
 
-    res = expand_impl(source, set())
+    minify = not no_minify
+
+    res = expand_impl(source, set(), minify)
 
     if tmp_file:
         out_path = os.path.join(TMP_DIR, os.path.basename(source))

@@ -46,10 +46,10 @@ def submit(source):
         if OnlineJudgeType.accepts_url(url):
             if OnlineJudgeType.FORMAT == 'FILE':
                 path_or_source = expand(source=source,
-                                        tmp_file=True, is_cli=False)
+                                        tmp_file=True, no_minify=False, is_cli=False)
             elif OnlineJudgeType.FORMAT == 'SOURCE':
                 path_or_source = expand(source=source,
-                                        tmp_file=False, is_cli=False)
+                                        tmp_file=False, no_minify=False, is_cli=False)
             else:
                 raise ValueError(
                     f'Unknown solution format: {OnlineJudgeType.FORMAT!r}'

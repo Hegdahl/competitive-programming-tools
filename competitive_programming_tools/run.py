@@ -98,6 +98,8 @@ def run_test(executable, interactor, argv, no_style_stderr, test_dir, test_name)
 
     input_path = os.path.join(test_dir, f'{test_name}.in')
     output_path = os.path.join(test_dir, f'{test_name}.ans')
+    if not os.path.exists(output_path) and os.path.basename(test_dir) == 'in':
+        output_path = os.path.join(os.path.dirname(test_dir), 'out', f'{test_name}.out')
 
     click.secho(
         'Running test ' +
